@@ -1,15 +1,38 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { AppProviders } from '@/components/app-providers';
+import { rallyColors } from '@/constants/rally';
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppProviders>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            contentStyle: { backgroundColor: rallyColors.bgApp },
+            headerStyle: { backgroundColor: rallyColors.bgApp },
+            headerShadowVisible: false,
+            headerTintColor: rallyColors.textPrimary,
+            headerTitleStyle: { color: rallyColors.textPrimary },
+          }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="invite" options={{ headerShown: false }} />
+          <Stack.Screen name="shared-habit/[habitId]" options={{ title: 'Shared habit' }} />
+          <Stack.Screen
+            name="(modals)"
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+            }}
+          />
+        </Stack>
+      </AppProviders>
+    </GestureHandlerRootView>
   );
 }

@@ -1,56 +1,114 @@
-# Welcome to your Expo app 👋
+# Rally
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Rally is an Expo React Native app for shared habit accountability. The app lets people track personal routines, share individual habits with friends, and compare progress against each person's own planned days.
 
-## Get started
+This repository is the real implementation repo. Planning and product source-of-truth documents remain in `C:\Users\Kareem\Newtype\04-ideas\habit-tracker-concept`.
 
-1. Install dependencies
+## Stack
 
-   ```bash
-   npm install
-   ```
+- Expo React Native
+- TypeScript
+- Expo Router
+- TanStack Query for Supabase-backed reads and mutations
+- Zustand for session-adjacent UI state, onboarding drafts, invite context, and pending check-ins
+- React Hook Form and Zod for mobile form validation
+- NetInfo-aware offline handling for queued check-ins
+- Expo Notifications, Haptics, and Clipboard for reminder, feedback, and invite-copy flows
+- Supabase local development and migrations
+- `@supabase/supabase-js` with React Native AsyncStorage session persistence
 
-2. Start the app
+## Setup
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```powershell
+cd C:\Users\Kareem\Projects\rally
+npm install
+Copy-Item .env.example .env
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+After starting Supabase, copy the local anon key from `supabase status` into `.env` as `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+For a physical phone in Expo Go, set `EXPO_PUBLIC_SUPABASE_URL` to your computer's LAN IP, not `127.0.0.1`, so the device can reach local Supabase.
 
-### Other setup steps
+## App Commands
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```powershell
+npm run start
+npm run android
+npm run ios
+npm run web
+npm run typecheck
+npm run lint
+npm run doctor
+```
 
-## Learn more
+## Local Supabase
 
-To learn more about developing your project with Expo, look at the following resources:
+The local Supabase project id is `rally`. The config keeps the custom `553xx` ports from the original backend pass:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- API: `55321`
+- DB: `55322`
+- Studio: `55323`
+- Inbucket: `55324`
+- Shadow DB: `55320`
+- Pooler, if enabled: `55329`
+- Edge inspector: `55383`
 
-## Join the community
+Supabase Storage is disabled for the MVP because the approved architecture uses initials and defers avatar uploads/media storage.
+Supabase Analytics is disabled locally because Rally will use PostHog later and the local Supabase Analytics sidecar is not needed for backend verification.
 
-Join our community of developers creating universal apps.
+## Seed Logins
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+The local seed already includes usable email/password accounts:
+
+- `avery.local@example.test` / `password123`
+- `blair.local@example.test` / `password123`
+- `casey.local@example.test` / `password123`
+- `devon.local@example.test` / `password123`
+
+These users are defined in `supabase/seed.sql` and are loaded when you run `npm run supabase:reset`.
+
+```powershell
+npm run supabase:start
+supabase status
+npm run supabase:reset
+npm run supabase:test
+npm run supabase:lint
+```
+
+## Backend Status
+
+The Supabase foundation has been migrated from the Newtype idea workspace into this repo.
+
+Included now:
+
+- `supabase/config.toml`
+- `supabase/migrations/20260612031926_rally_backend_foundation.sql`
+- `supabase/seed.sql`
+- `supabase/tests/rally_rls_test.sql`
+
+Current backend coverage includes the core schema, RLS policies, grants, seed data, and pgTAP tests for direct table access, shared-habit visibility, idempotent check-ins, service-only jobs, and invite preview access.
+
+Current frontend coverage includes:
+
+- Auth screens for sign up and log in
+- First habit setup, setup details, private confirmation, and permission-denied recovery
+- Today, Habits, Shared, Progress, and Me tabs
+- Invite preview and buddy target setup
+- Share habit, invite-created, invite-copied, habit settings, nudge, and check-in retry surfaces
+- Typed Supabase RPC wrappers for implemented backend functions
+- Explicit backend-follow-up states for placeholder RPCs
+
+Not included yet:
+
+- Supabase Storage buckets or avatar uploads
+- Hosted Supabase project linking
+- Production secrets
+- EAS builds or app store configuration
+- PostHog integration
+- Production Edge Function deployment
+- Complete backend implementations for `get_weekly_view`, `get_calendar_view`, `get_shared_habit_detail`, and `update_reminder_preferences`
+
+## Related Docs
+
+- `LIFECYCLE.md` describes how this implementation repo relates to the Newtype planning workspace.
+- `AGENTS.md` contains working rules for coding agents in this repo.
+- Before implementation changes, review the relevant planning handoffs in `C:\Users\Kareem\Newtype\04-ideas\habit-tracker-concept`.
