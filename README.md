@@ -1,116 +1,69 @@
 # Rally
 
-Rally is a personal-only Expo React Native habit tracker for V1. The app lets one signed-in user create habits, mark today's habits complete, inspect weekly progress, and archive or delete habits.
-
-This repository is the real implementation repo. Planning and product source-of-truth documents remain in `C:\Users\Kareem\Newtype\04-ideas\habit-tracker-concept`.
+Rally is a personal habit tracker built with Expo and React Native. Signed-in users can create habits, record or undo today's completion, review weekly progress and completion history, and archive or delete habits.
 
 ## Stack
 
-- Expo React Native
+- Expo, React Native, and Expo Router
 - TypeScript
-- Expo Router
-- TanStack Query for Supabase-backed reads and mutations
-- Zustand for auth/session-adjacent UI state
-- React Hook Form and Zod for mobile form validation
-- NetInfo-aware online state for React Query
-- Supabase local development and migrations
-- `@supabase/supabase-js` with React Native AsyncStorage session persistence
+- Supabase Auth and PostgreSQL RPCs
+- TanStack Query for server state
+- Zustand for session-adjacent UI state
+- React Hook Form and Zod for form validation
+- AsyncStorage-backed Supabase sessions
+
+## Prerequisites
+
+- A supported Node.js and npm installation
+- An Expo-compatible Android, iOS, or web development environment
+- A hosted Supabase project with email/password authentication enabled
+- A deployed Rally-compatible database schema and RPC contract
+
+The backend must expose the RPCs used by `src/lib/rally-api.ts`: `create_habit`, `list_active_habits`, `mark_habit_done_today`, `undo_today_completion`, `get_weekly_progress`, `get_habit_detail`, `archive_habit`, and `delete_habit`. Each RPC accepts an `input` object and returns the application's typed result envelope.
 
 ## Setup
 
 ```powershell
-cd C:\Users\Kareem\Projects\rally
+git clone <repository-url>
+cd rally
 npm install
 Copy-Item .env.example .env
 ```
 
-After starting Supabase, copy the local anon key from `supabase status` into `.env` as `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
-For a physical phone in Expo Go, set `EXPO_PUBLIC_SUPABASE_URL` to your computer's LAN IP, not `127.0.0.1`, so the device can reach local Supabase.
+Set these public client variables in `.env`:
 
-## App Commands
+```dotenv
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-publishable-or-anon-key
+```
+
+Only values safe to expose in a client application should use the `EXPO_PUBLIC_` prefix. Never place a Supabase service-role key or another server secret in the app environment.
+
+## Commands
 
 ```powershell
 npm run start
 npm run android
 npm run ios
 npm run web
-npm run typecheck
 npm run lint
+npm run typecheck
 npm run doctor
-npm run test:streaks
-npm run test:e2e:habits
 ```
 
-## Local Supabase
+## App Capabilities
 
-The local Supabase project id is `rally`. The config keeps custom `553xx` ports:
+- Email/password sign-up, sign-in, persisted sessions, and sign-out
+- Auth-gated personal habit dashboard
+- Habit creation with validated input
+- Today's completion and undo actions
+- Weekly progress and a 12-week completion grid
+- Habit detail and completion history
+- Habit archive and permanent deletion flows
+- Network-aware query behavior
 
-- API: `55321`
-- DB: `55322`
-- Studio: `55323`
-- Inbucket: `55324`
-- Shadow DB: `55320`
-- Pooler, if enabled: `55329`
-- Edge inspector: `55383`
+The repository contains app source and build configuration only. Backend deployment source, local backend tooling, internal planning material, and end-to-end test infrastructure are maintained separately.
 
-Supabase Storage is disabled for V1 because the approved architecture uses initials and defers avatar uploads/media storage.
-Supabase Analytics is disabled locally because Rally will use PostHog later and the local Supabase Analytics sidecar is not needed for backend verification.
+## Current Scope
 
-## Seed Logins
-
-The local seed includes usable email/password accounts:
-
-- `avery.local@example.test` / `password123`
-- `blair.local@example.test` / `password123`
-
-These users are defined in `supabase/seed.sql` and are loaded when you run `npm run supabase:reset`.
-The Avery account contains deterministic completion histories for visual and classifier testing: separate 1- and 2-day runs, repeated 3- and 7-day runs on one habit, an exact 30-day run, and an exact 90-day run.
-
-```powershell
-npm run supabase:start
-supabase status
-npm run supabase:reset
-npm run supabase:test
-npm run supabase:lint
-```
-
-## Backend Status
-
-The current Supabase V1 backend lives in:
-
-- `supabase/config.toml`
-- `supabase/migrations/20260612031926_rally_backend_foundation.sql`
-- `supabase/seed.sql`
-- `supabase/tests/rally_rls_test.sql`
-
-Current backend coverage includes profiles, personal habits, habit completions, active habit summaries, habit detail/history, weekly progress, archive/delete mutations, RLS policies, grants, seed data, and pgTAP access-control tests.
-
-## Frontend Status
-
-Current frontend coverage includes:
-
-- Auth screens for sign up and log in
-- Auth-gated personal habit dashboard at `src/app/(app)/habits/index.tsx`
-- Create habit screen at `src/app/(app)/habits/new.tsx`
-- Habit detail screen at `src/app/(app)/habits/[habitId].tsx`
-- Archive and delete confirmation modals
-- Ember-to-Violet completion tiers across the 12-week grid, calculated from each habit's complete completion history
-- Typed Supabase RPC wrappers for implemented V1 backend functions
-- Playwright coverage for the personal habit flow and pure streak classification
-
-Not included in V1:
-
-- Shared habits, invites, nudges, rankings, friend activity, or social check-ins
-- Reminder notifications
-- Supabase Storage buckets or avatar uploads
-- Hosted Supabase project linking
-- Production secrets
-- EAS builds or app store configuration
-- PostHog integration
-- Production Edge Function deployment
-
-## Related Docs
-
-- `LIFECYCLE.md` describes how this implementation repo relates to the Newtype planning workspace.
-- `AGENTS.md` contains working rules for coding agents in this repo.
-- Before implementation changes, review the relevant planning handoffs in `C:\Users\Kareem\Newtype\04-ideas\habit-tracker-concept`.
+Rally does not currently include shared habits, invites, nudges, rankings, social activity, reminder notifications, avatar uploads, analytics, or app-store deployment configuration.
