@@ -3,17 +3,9 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { z } from 'zod';
 
-import {
-  ErrorState,
-  FooterActions,
-  RallyButton,
-  RallyScreen,
-  StatePanel,
-  TextField,
-} from '@/components/rally/ui';
-import { applyZodErrors, messageFromError } from '@/lib/forms';
+import { ErrorState, FooterActions, RallyButton, RallyScreen, TextField } from '@/components/rally/ui';
+import { applyZodErrors } from '@/lib/forms';
 import { signInWithEmail } from '@/lib/rally-api';
-import { useAppStore } from '@/store/use-app-store';
 
 type LoginForm = {
   email: string;
@@ -27,7 +19,6 @@ const loginSchema = z.object({
 
 export default function LogInScreen() {
   const router = useRouter();
-  const inviteTokenOrCode = useAppStore((state) => state.inviteContext.inviteTokenOrCode);
   const [apiError, setApiError] = useState<string | null>(null);
   const {
     control,
@@ -50,35 +41,26 @@ export default function LogInScreen() {
     setApiError(null);
     try {
       await signInWithEmail(parsed.data.email, parsed.data.password);
-      if (inviteTokenOrCode) {
-        router.replace(`/invite/${inviteTokenOrCode}/setup`);
-        return;
-      }
-      router.replace('/today');
-    } catch (error) {
-      setApiError(messageFromError(error));
+      router.replace('/habits');
+    } catch {
+      setApiError('We could not sign you in. Check your details and try again.');
     }
   });
 
   return (
     <RallyScreen
-      title="Rally"
-      subtitle="Log in to keep private habits and shared accountability in one place."
+      title="Track your weekly habits privately."
+      subtitle="Create habits, mark them done, and see where each one stands this week."
       footer={
         <FooterActions>
           <RallyButton loading={isSubmitting} onPress={onSubmit}>
             Log in
           </RallyButton>
           <RallyButton variant="secondary" href="/sign-up">
-            Create account
+            Sign up
           </RallyButton>
         </FooterActions>
       }>
-      <StatePanel
-        title="Track privately first"
-        message="Sharing happens per habit, only after you choose to invite someone."
-        tone="private"
-      />
       <Controller
         control={control}
         name="email"
@@ -107,7 +89,7 @@ export default function LogInScreen() {
           />
         )}
       />
-      {apiError ? <ErrorState title="Log in failed" message={apiError} /> : null}
+      {apiError ? <ErrorState title="We could not sign you in." message={apiError} /> : null}
     </RallyScreen>
   );
 }

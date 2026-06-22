@@ -12,14 +12,8 @@ export default function ModalLayout() {
         headerTintColor: rallyColors.textPrimary,
         presentation: 'modal',
       }}>
-      <Stack.Screen name="share-habit" options={{ title: 'Share habit' }} />
-      <Stack.Screen name="invite-created" options={{ title: 'Invite created' }} />
-      <Stack.Screen name="invite-copied" options={{ title: 'Invite copied' }} />
-      <Stack.Screen name="habit-settings" options={{ title: 'Habit settings' }} />
-      <Stack.Screen name="nudge-confirmation" options={{ title: 'Nudge' }} />
-      <Stack.Screen name="nudge-sent" options={{ title: 'Nudge sent' }} />
-      <Stack.Screen name="permission-denied" options={{ title: 'Reminders' }} />
-      <Stack.Screen name="check-in-retry" options={{ title: 'Check-in retry' }} />
+      <Stack.Screen name="archive-habit" options={{ title: 'Archive habit', headerShown: false }} />
+      <Stack.Screen name="delete-habit" options={{ title: 'Delete habit', headerShown: false }} />
     </Stack>
   );
 }

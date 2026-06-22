@@ -1,11 +1,10 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -17,11 +16,26 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { rallyColors, rallyLayout, rallyRadius, rallySpacing, weekdayOptions } from '@/constants/rally';
-import { displayWeekdays, formatPercent } from '@/lib/date';
-import type { DailyHabitRow, PendingCheckin, Weekday } from '@/types/rally';
+import { rallyColors, rallyLayout, rallyRadius, rallySpacing } from '@/constants/rally';
+import { formatPercent } from '@/lib/date';
+import type { HabitSummary } from '@/types/rally';
 
 type TextVariant = 'title' | 'heading' | 'cardTitle' | 'body' | 'supporting' | 'micro' | 'code';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
+type ChipTone = 'neutral' | 'success' | 'danger' | 'primary';
+type RallyIconName = 'add' | 'chevron-back' | 'close';
+type RallyHref = ComponentProps<typeof Link>['href'];
+type RallyIconButtonAppearance = 'framed' | 'quiet';
+
+type RallyHeaderAction = {
+  icon: Extract<RallyIconName, 'add' | 'close'>;
+  accessibilityLabel: string;
+  href?: RallyHref;
+  onPress?: PressableProps['onPress'];
+  testID?: string;
+  tone?: 'default' | 'primary' | 'muted';
+  appearance?: RallyIconButtonAppearance;
+};
 
 export function RallyText({
   variant = 'body',
@@ -42,7 +56,7 @@ export function RallyText({
       style={[
         styles.textBase,
         textVariantStyles[variant],
-        { color: color ?? defaultTextColor(variant) },
+        { color: color ?? (variant === 'supporting' || variant === 'micro' ? rallyColors.textSecondary : rallyColors.textPrimary) },
         style,
       ]}>
       {children}
@@ -50,16 +64,12 @@ export function RallyText({
   );
 }
 
-function defaultTextColor(variant: TextVariant) {
-  if (variant === 'supporting' || variant === 'micro') {
-    return rallyColors.textSecondary;
-  }
-  return rallyColors.textPrimary;
-}
-
 export function RallyScreen({
   title,
   subtitle,
+  backHref,
+  onBack,
+  rightAction,
   children,
   footer,
   scroll = true,
@@ -67,20 +77,82 @@ export function RallyScreen({
 }: {
   title?: string;
   subtitle?: string;
+  backHref?: RallyHref;
+  onBack?: PressableProps['onPress'];
+  rightAction?: RallyHeaderAction;
   children: ReactNode;
   footer?: ReactNode;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
 }) {
   const insets = useSafeAreaInsets();
-  const bottomPadding = footer ? rallySpacing.xl + 96 : rallySpacing.xl + insets.bottom;
-  const header =
-    title || subtitle ? (
-      <View style={styles.screenHeader}>
-        {title ? <RallyText variant="title">{title}</RallyText> : null}
-        {subtitle ? <RallyText variant="supporting">{subtitle}</RallyText> : null}
-      </View>
-    ) : null;
+  const router = useRouter();
+  const bottomPadding = footer ? rallySpacing.xl + 116 : rallySpacing.xl + insets.bottom;
+  const hasNavigationControls = Boolean(backHref || onBack || rightAction);
+  const handleBack =
+    onBack ??
+    (backHref
+      ? () => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace(backHref);
+          }
+        }
+      : undefined);
+  const header = title || subtitle || hasNavigationControls ? (
+    <View style={styles.screenHeader}>
+      {handleBack ? (
+        <View style={styles.headerControlRow}>
+          <RallyIconButton
+            icon="chevron-back"
+            accessibilityLabel="Back"
+            onPress={handleBack}
+            appearance="quiet"
+            tone="muted"
+          />
+          {rightAction ? (
+            <RallyIconButton
+              icon={rightAction.icon}
+              accessibilityLabel={rightAction.accessibilityLabel}
+              href={rightAction.href}
+              onPress={rightAction.onPress}
+              testID={rightAction.testID}
+              tone={rightAction.tone}
+              appearance={rightAction.appearance ?? 'quiet'}
+            />
+          ) : null}
+        </View>
+      ) : null}
+      {title || subtitle ? (
+        <View style={styles.screenHeaderRow}>
+        <View style={styles.headerTitleGroup}>
+          {title ? (
+            <RallyText variant="title" style={styles.headerTitle}>
+              {title}
+            </RallyText>
+          ) : null}
+          {subtitle ? (
+            <RallyText variant="supporting" style={styles.headerSubtitle}>
+              {subtitle}
+            </RallyText>
+          ) : null}
+        </View>
+        {!handleBack && rightAction ? (
+            <RallyIconButton
+              icon={rightAction.icon}
+              accessibilityLabel={rightAction.accessibilityLabel}
+              href={rightAction.href}
+              onPress={rightAction.onPress}
+              testID={rightAction.testID}
+              tone={rightAction.tone}
+              appearance={rightAction.appearance ?? 'quiet'}
+            />
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  ) : null;
   const content = (
     <View style={[styles.screenContent, contentStyle]}>
       {header}
@@ -94,6 +166,8 @@ export function RallyScreen({
         <ScrollView
           style={styles.screenScroll}
           contentInsetAdjustmentBehavior="automatic"
+          automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.screenScrollContent,
@@ -115,17 +189,9 @@ export function RallyScreen({
   );
 }
 
-export function RallyCard({
-  children,
-  style,
-}: {
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
-}) {
+export function RallyCard({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
-
-type ButtonVariant = 'primary' | 'secondary' | 'social' | 'danger' | 'ghost';
 
 export function RallyButton({
   children,
@@ -135,6 +201,8 @@ export function RallyButton({
   onPress,
   href,
   accessibilityLabel,
+  testID,
+  style,
 }: {
   children: ReactNode;
   variant?: ButtonVariant;
@@ -143,6 +211,8 @@ export function RallyButton({
   onPress?: PressableProps['onPress'];
   href?: ComponentProps<typeof Link>['href'];
   accessibilityLabel?: string;
+  testID?: string;
+  style?: StyleProp<ViewStyle>;
 }) {
   const button = (
     <Pressable
@@ -150,20 +220,18 @@ export function RallyButton({
       accessibilityLabel={accessibilityLabel}
       disabled={disabled || loading}
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [
         styles.button,
         buttonVariantStyles[variant],
         (disabled || loading) && styles.buttonDisabled,
         pressed && !disabled && !loading ? styles.pressed : null,
+        style,
       ]}>
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? rallyColors.bgApp : rallyColors.actionPrimary} />
       ) : (
-        <RallyText
-          selectable={false}
-          variant="body"
-          color={variant === 'primary' || variant === 'social' ? rallyColors.bgApp : rallyColors.textPrimary}
-          style={styles.buttonText}>
+        <RallyText selectable={false} variant="body" color={buttonTextColor(variant)} style={styles.buttonText}>
           {children}
         </RallyText>
       )}
@@ -180,25 +248,42 @@ export function RallyButton({
   return button;
 }
 
-export function IconButton({
-  label,
+export function RallyIconButton({
   icon,
-  onPress,
+  accessibilityLabel,
   href,
+  onPress,
+  testID,
+  tone = 'default',
+  appearance = 'framed',
 }: {
-  label: string;
-  icon: string;
+  icon: RallyIconName;
+  accessibilityLabel: string;
+  href?: RallyHref;
   onPress?: PressableProps['onPress'];
-  href?: ComponentProps<typeof Link>['href'];
+  testID?: string;
+  tone?: 'default' | 'primary' | 'muted';
+  appearance?: RallyIconButtonAppearance;
 }) {
+  const iconColor =
+    tone === 'primary'
+      ? rallyColors.actionPrimary
+      : tone === 'muted'
+        ? rallyColors.textSecondary
+        : rallyColors.textPrimary;
   const button = (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}>
-      <RallyText selectable={false} variant="heading" style={styles.iconButtonText}>
-        {icon}
+      testID={testID}
+      hitSlop={rallySpacing.xs}
+      style={({ pressed }) => [styles.iconButton, appearance === 'quiet' ? styles.iconButtonQuiet : null, pressed ? styles.pressed : null]}>
+      <RallyText
+        selectable={false}
+        color={iconColor}
+        style={[styles.iconButtonText, icon === 'chevron-back' ? styles.backIconText : null]}>
+        {iconGlyph(icon)}
       </RallyText>
     </Pressable>
   );
@@ -210,10 +295,19 @@ export function IconButton({
       </Link>
     );
   }
+
   return button;
 }
 
-type ChipTone = 'neutral' | 'private' | 'shared' | 'success' | 'warning' | 'danger' | 'primary';
+function iconGlyph(icon: RallyIconName) {
+  if (icon === 'chevron-back') {
+    return '\u2039';
+  }
+  if (icon === 'close') {
+    return '\u00d7';
+  }
+  return '+';
+}
 
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: ChipTone }) {
   return (
@@ -225,25 +319,15 @@ export function Chip({ label, tone = 'neutral' }: { label: string; tone?: ChipTo
   );
 }
 
-function chipTextColor(tone: ChipTone) {
-  if (tone === 'primary') {
-    return rallyColors.bgApp;
-  }
-  return rallyColors.textPrimary;
-}
-
 export function ProgressBar({ value, tone = 'primary' }: { value: number; tone?: ChipTone }) {
   return (
-    <View
-      accessibilityLabel={`Progress ${formatPercent(value)}`}
-      accessibilityRole="progressbar"
-      style={styles.progressTrack}>
+    <View accessibilityLabel={`Progress ${formatPercent(value)}`} accessibilityRole="progressbar" style={styles.progressTrack}>
       <View
         style={[
           styles.progressFill,
           {
             width: `${Math.max(0, Math.min(100, value))}%`,
-            backgroundColor: progressColor(tone),
+            backgroundColor: tone === 'success' ? rallyColors.statusSuccess : rallyColors.actionPrimary,
           },
         ]}
       />
@@ -251,45 +335,32 @@ export function ProgressBar({ value, tone = 'primary' }: { value: number; tone?:
   );
 }
 
-function progressColor(tone: ChipTone) {
-  switch (tone) {
-    case 'shared':
-      return rallyColors.socialShared;
-    case 'success':
-      return rallyColors.statusSuccess;
-    case 'warning':
-      return rallyColors.statusWarning;
-    case 'danger':
-      return rallyColors.statusDanger;
-    default:
-      return rallyColors.actionPrimary;
-  }
-}
-
 export function TextField({
   label,
   value,
   onChangeText,
   placeholder,
+  helper,
   error,
   keyboardType,
   secureTextEntry,
   autoCapitalize = 'none',
+  testID,
 }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
   placeholder?: string;
+  helper?: string;
   error?: string;
   keyboardType?: KeyboardTypeOptions;
   secureTextEntry?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  testID?: string;
 }) {
   return (
     <View style={styles.fieldGroup}>
-      <RallyText variant="micro" color={rallyColors.textSecondary}>
-        {label}
-      </RallyText>
+      <RallyText variant="micro">{label}</RallyText>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -298,86 +369,16 @@ export function TextField({
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         autoCapitalize={autoCapitalize}
+        testID={testID}
         style={styles.input}
       />
       {error ? (
         <RallyText selectable variant="supporting" color={rallyColors.statusDanger}>
           {error}
         </RallyText>
+      ) : helper ? (
+        <RallyText variant="supporting">{helper}</RallyText>
       ) : null}
-    </View>
-  );
-}
-
-export function SwitchRow({
-  title,
-  description,
-  value,
-  onValueChange,
-}: {
-  title: string;
-  description?: string;
-  value: boolean;
-  onValueChange: (value: boolean) => void;
-}) {
-  return (
-    <View style={styles.switchRow}>
-      <View style={styles.switchCopy}>
-        <RallyText variant="cardTitle">{title}</RallyText>
-        {description ? <RallyText variant="supporting">{description}</RallyText> : null}
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ true: rallyColors.actionPrimary, false: rallyColors.bgInput }}
-        thumbColor={value ? rallyColors.bgApp : rallyColors.textMuted}
-      />
-    </View>
-  );
-}
-
-export function WeekdaySelector({
-  selected,
-  onChange,
-}: {
-  selected: Weekday[];
-  onChange: (selected: Weekday[]) => void;
-}) {
-  const toggle = (weekday: Weekday) => {
-    const exists = selected.includes(weekday);
-    const next = exists ? selected.filter((day) => day !== weekday) : [...selected, weekday];
-    if (next.length === 0) {
-      return;
-    }
-    onChange(next.sort((a, b) => a - b));
-  };
-
-  return (
-    <View style={styles.weekdayRow}>
-      {weekdayOptions.map((option) => {
-        const active = selected.includes(option.value);
-        return (
-          <Pressable
-            key={option.value}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: active }}
-            accessibilityLabel={option.longLabel}
-            onPress={() => toggle(option.value)}
-            style={({ pressed }) => [
-              styles.weekdayButton,
-              active ? styles.weekdayButtonActive : null,
-              pressed ? styles.pressed : null,
-            ]}>
-            <RallyText
-              selectable={false}
-              variant="body"
-              color={active ? rallyColors.bgApp : rallyColors.textPrimary}
-              style={styles.weekdayText}>
-              {option.label}
-            </RallyText>
-          </Pressable>
-        );
-      })}
     </View>
   );
 }
@@ -398,8 +399,8 @@ export function StatePanel({
   href?: ComponentProps<typeof Link>['href'];
 }) {
   return (
-    <RallyCard style={[styles.statePanel, tone === 'danger' ? styles.dangerPanel : null]}>
-      <Chip label={tone === 'danger' ? 'Needs attention' : 'State'} tone={tone} />
+    <RallyCard style={tone === 'danger' ? styles.dangerPanel : null}>
+      <Chip label={tone === 'danger' ? 'Needs attention' : 'Rally'} tone={tone} />
       <RallyText variant="heading">{title}</RallyText>
       <RallyText variant="supporting">{message}</RallyText>
       {actionLabel ? (
@@ -411,17 +412,7 @@ export function StatePanel({
   );
 }
 
-export function BackendGapState({ rpcName }: { rpcName: string }) {
-  return (
-    <StatePanel
-      tone="warning"
-      title="Backend follow-up needed"
-      message={`${rpcName} is wired from the app, but the local Supabase RPC is still reserved for the next backend pass.`}
-    />
-  );
-}
-
-export function LoadingState({ label = 'Loading Rally' }: { label?: string }) {
+export function LoadingState({ label = 'Loading habits...' }: { label?: string }) {
   return (
     <View style={styles.loadingState}>
       <ActivityIndicator color={rallyColors.actionPrimary} />
@@ -431,7 +422,7 @@ export function LoadingState({ label = 'Loading Rally' }: { label?: string }) {
 }
 
 export function ErrorState({
-  title = 'Something did not load',
+  title = 'Something went wrong',
   message,
   onRetry,
 }: {
@@ -439,15 +430,7 @@ export function ErrorState({
   message: string;
   onRetry?: PressableProps['onPress'];
 }) {
-  return (
-    <StatePanel
-      title={title}
-      message={message}
-      tone="danger"
-      actionLabel={onRetry ? 'Retry' : undefined}
-      onAction={onRetry}
-    />
-  );
+  return <StatePanel title={title} message={message} tone="danger" actionLabel={onRetry ? 'Try again' : undefined} onAction={onRetry} />;
 }
 
 export function FooterActions({ children }: { children: ReactNode }) {
@@ -463,135 +446,131 @@ export function Section({ title, children }: { title: string; children: ReactNod
   );
 }
 
-export function MetricCell({
-  label,
-  value,
-  tone = 'neutral',
-}: {
-  label: string;
-  value: string;
-  tone?: ChipTone;
-}) {
+export function MetricCell({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.metricCell}>
-      <RallyText variant="heading" color={progressColor(tone)}>
+      <RallyText variant="micro">{label}</RallyText>
+      <RallyText variant="cardTitle" color={rallyColors.actionPrimary}>
         {value}
       </RallyText>
-      <RallyText variant="micro">{label}</RallyText>
     </View>
   );
 }
 
 export function HabitCard({
-  row,
-  pendingCheckin,
-  onCheckIn,
-  onSkip,
-  onShare,
-  onSettings,
-  onOpenShared,
+  habit,
+  onMarkDone,
+  onUndo,
+  onOpen,
+  busy,
 }: {
-  row: DailyHabitRow;
-  pendingCheckin?: PendingCheckin;
-  onCheckIn?: () => void;
-  onSkip?: () => void;
-  onShare?: () => void;
-  onSettings?: () => void;
-  onOpenShared?: () => void;
+  habit: HabitSummary;
+  onMarkDone?: () => void;
+  onUndo?: () => void;
+  onOpen?: () => void;
+  busy?: boolean;
 }) {
-  const isShared = row.habit.privacy === 'shared';
-  const progress = row.week_progress.capped_percentage;
-  const tone =
-    row.today.state === 'missed'
-      ? 'danger'
-      : row.week_progress.pace_state === 'behind_pace'
-        ? 'warning'
-        : row.week_progress.pace_state === 'complete' || row.today.state === 'completed'
-          ? 'success'
-          : 'primary';
-
   return (
-    <RallyCard>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleGroup}>
-          <RallyText variant="cardTitle">{row.habit.name}</RallyText>
-          <RallyText variant="supporting">
-            {displayWeekdays(row.membership.planned_weekdays)} target
+    <Pressable accessibilityRole="button" onPress={onOpen} style={({ pressed }) => [pressed ? styles.pressed : null]}>
+      <RallyCard>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleGroup}>
+            <RallyText variant="cardTitle">{habit.name}</RallyText>
+            <RallyText variant="supporting">
+              {habit.completed_this_week} / {habit.weekly_target} this week
+            </RallyText>
+          </View>
+          <RallyText variant="code" color={rallyColors.actionPrimary}>
+            {Math.round(habit.progress_percentage)}%
           </RallyText>
         </View>
-        <View style={styles.inlineChips}>
-          <Chip label={isShared ? 'Shared' : 'Private'} tone={isShared ? 'shared' : 'private'} />
-          {pendingCheckin ? <Chip label="Pending sync" tone="warning" /> : null}
-        </View>
-      </View>
-
-      <View style={styles.progressBlock}>
-        <View style={styles.progressLabelRow}>
-          <RallyText variant="supporting">
-            {row.week_progress.completed_count} of {row.week_progress.weekly_target} this week
-          </RallyText>
-          <RallyText variant="supporting">{formatPercent(progress)}</RallyText>
-        </View>
-        <ProgressBar value={progress} tone={tone} />
-      </View>
-
-      <View style={styles.inlineChips}>
-        <Chip label={stateLabel(pendingCheckin ? 'pending_sync' : row.today.state)} tone={tone} />
-        {row.membership.pending_effective_week_start ? <Chip label="Change scheduled" tone="warning" /> : null}
-      </View>
-
-      {row.shared_signal ? (
-        <RallyText variant="supporting">
-          {row.shared_signal.peer_completed_today_count} friends checked in today
-        </RallyText>
-      ) : null}
-
-      <View style={styles.cardActions}>
-        {row.today.can_record_checkin && !pendingCheckin ? (
-          <>
-            <RallyButton variant="primary" onPress={onCheckIn}>
-              Check in
+        <ProgressBar value={habit.progress_percentage} tone={habit.done_today ? 'success' : 'primary'} />
+        <View style={styles.cardActions}>
+          {habit.done_today ? (
+            <>
+              <Chip label="Done today" tone="success" />
+              <RallyButton variant="secondary" loading={busy} onPress={onUndo}>
+                Undo
+              </RallyButton>
+            </>
+          ) : (
+            <RallyButton loading={busy} onPress={onMarkDone}>
+              Mark done
             </RallyButton>
-            <RallyButton variant="secondary" onPress={onSkip}>
-              Skip today
-            </RallyButton>
-          </>
-        ) : null}
-        {isShared && onOpenShared ? (
-          <RallyButton variant="social" onPress={onOpenShared}>
-            Open shared habit
-          </RallyButton>
-        ) : null}
-        {!isShared && onShare ? (
-          <RallyButton variant="secondary" onPress={onShare}>
-            Share habit
-          </RallyButton>
-        ) : null}
-        {onSettings ? (
-          <RallyButton variant="ghost" onPress={onSettings}>
-            Settings
-          </RallyButton>
-        ) : null}
-      </View>
-    </RallyCard>
+          )}
+        </View>
+      </RallyCard>
+    </Pressable>
   );
 }
 
-function stateLabel(state: DailyHabitRow['today']['state'] | 'pending_sync') {
-  switch (state) {
-    case 'completed':
-      return 'Completed';
-    case 'skipped':
-      return 'Skipped';
-    case 'missed':
-      return 'Missed';
-    case 'due':
-      return 'Due today';
-    case 'pending_sync':
-      return 'Pending sync';
-    default:
-      return 'Upcoming';
+export function RallySheetScreen({
+  backgroundTitle,
+  sheetTitle,
+  onClose,
+  children,
+}: {
+  backgroundTitle: string;
+  sheetTitle: string;
+  onClose?: PressableProps['onPress'];
+  children: ReactNode;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={styles.sheetScreenRoot}>
+      <View style={[styles.sheetGhostContent, { paddingTop: rallySpacing.lg + insets.top }]}>
+        <RallyText variant="title" style={styles.sheetGhostText}>
+          {backgroundTitle}
+        </RallyText>
+      </View>
+      <View style={styles.sheetScrim} />
+      <View style={[styles.sheetPanel, { paddingBottom: Math.max(insets.bottom, rallySpacing.sm) }]}>
+        <View style={styles.sheetHandle} />
+        <View style={styles.sheetHeaderRow}>
+          <RallyText variant="heading" style={styles.sheetTitle}>
+            {sheetTitle}
+          </RallyText>
+          {onClose ? (
+            <RallyIconButton
+              icon="close"
+              accessibilityLabel="Close"
+              onPress={onClose}
+              appearance="quiet"
+              tone="muted"
+            />
+          ) : null}
+        </View>
+        <View style={styles.sheetBody}>{children}</View>
+      </View>
+    </View>
+  );
+}
+
+function buttonTextColor(variant: ButtonVariant) {
+  if (variant === 'primary' || variant === 'success') {
+    return rallyColors.bgApp;
   }
+  if (variant === 'danger') {
+    return rallyColors.statusDanger;
+  }
+  if (variant === 'ghost') {
+    return rallyColors.textSecondary;
+  }
+  return rallyColors.textPrimary;
+}
+
+function chipTextColor(tone: ChipTone) {
+  if (tone === 'success') {
+    return rallyColors.statusSuccess;
+  }
+  if (tone === 'danger') {
+    return rallyColors.statusDanger;
+  }
+  if (tone === 'primary') {
+    return rallyColors.actionPrimary;
+  }
+  return rallyColors.textSecondary;
 }
 
 const styles = StyleSheet.create({
@@ -607,27 +586,51 @@ const styles = StyleSheet.create({
   },
   screenScrollContent: {
     alignItems: 'center',
-    paddingHorizontal: rallySpacing.lg,
+    paddingHorizontal: 28,
   },
   screenStatic: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: rallySpacing.lg,
+    paddingHorizontal: 28,
   },
   screenContent: {
     width: '100%',
-    maxWidth: rallyLayout.maxWidth,
+    maxWidth: 420,
     gap: rallySpacing.md,
   },
   screenHeader: {
     gap: rallySpacing.xs,
+    paddingBottom: rallySpacing.sm,
+  },
+  screenHeaderRow: {
+    minHeight: rallyLayout.minTouchTarget,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: rallySpacing.xs,
+  },
+  headerControlRow: {
+    minHeight: rallyLayout.minTouchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitleGroup: {
+    flex: 1,
+    alignItems: 'flex-start',
+    gap: rallySpacing.xxs,
+  },
+  headerTitle: {
+    textAlign: 'left',
+  },
+  headerSubtitle: {
+    textAlign: 'left',
   },
   footer: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: rallySpacing.lg,
+    paddingHorizontal: 28,
     paddingTop: rallySpacing.md,
     backgroundColor: rallyColors.bgApp,
     borderTopColor: rallyColors.borderDefault,
@@ -635,37 +638,32 @@ const styles = StyleSheet.create({
   },
   footerActions: {
     width: '100%',
-    maxWidth: rallyLayout.maxWidth,
+    maxWidth: 420,
     alignSelf: 'center',
     gap: rallySpacing.xs,
   },
   card: {
-    gap: rallySpacing.md,
+    gap: rallySpacing.sm,
     borderRadius: rallyRadius.card,
-    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: rallyColors.borderDefault,
     backgroundColor: rallyColors.bgSurface,
     padding: rallySpacing.md,
   },
   button: {
-    minHeight: rallyLayout.minTouchTarget,
+    minHeight: 48,
     borderRadius: rallyRadius.control,
-    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: rallySpacing.md,
-    paddingVertical: rallySpacing.xs,
+    paddingVertical: 13,
   },
   buttonText: {
-    fontWeight: '700',
+    fontWeight: '600',
     textAlign: 'center',
   },
   buttonDisabled: {
     opacity: 0.48,
-  },
-  pressed: {
-    opacity: 0.72,
   },
   iconButton: {
     width: rallyLayout.minTouchTarget,
@@ -673,21 +671,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: rallyRadius.control,
-    borderCurve: 'continuous',
-    backgroundColor: rallyColors.bgInput,
+    borderWidth: 1,
+    borderColor: rallyColors.borderDefault,
+    backgroundColor: rallyColors.bgSurface,
   },
   iconButtonText: {
-    lineHeight: 22,
+    fontSize: 26,
+    lineHeight: 28,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  iconButtonQuiet: {
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  backIconText: {
+    fontSize: 32,
+    lineHeight: 38,
+  },
+  pressed: {
+    opacity: 0.72,
   },
   chip: {
-    minHeight: 28,
-    borderRadius: rallyRadius.control,
-    borderCurve: 'continuous',
+    minHeight: 24,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: rallySpacing.sm,
+    paddingHorizontal: 9,
     paddingVertical: rallySpacing.xxs,
     borderWidth: 1,
+    alignSelf: 'flex-start',
   },
   progressTrack: {
     height: 8,
@@ -703,60 +716,16 @@ const styles = StyleSheet.create({
     gap: rallySpacing.xs,
   },
   input: {
-    minHeight: rallyLayout.minTouchTarget,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: rallyColors.borderDefault,
     borderRadius: rallyRadius.control,
-    borderCurve: 'continuous',
     backgroundColor: rallyColors.bgInput,
     color: rallyColors.textPrimary,
-    paddingHorizontal: rallySpacing.md,
+    paddingHorizontal: 14,
     paddingVertical: rallySpacing.xs,
-    fontSize: 16,
-  },
-  switchRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: rallySpacing.md,
-    padding: rallySpacing.md,
-    borderRadius: rallyRadius.card,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: rallyColors.borderDefault,
-    backgroundColor: rallyColors.bgSurface,
-  },
-  switchCopy: {
-    flex: 1,
-    gap: rallySpacing.xxs,
-  },
-  weekdayRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: rallySpacing.xs,
-  },
-  weekdayButton: {
-    width: rallyLayout.minTouchTarget,
-    height: rallyLayout.minTouchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: rallyRadius.control,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: rallyColors.borderDefault,
-    backgroundColor: rallyColors.bgInput,
-  },
-  weekdayButtonActive: {
-    backgroundColor: rallyColors.actionPrimary,
-    borderColor: rallyColors.actionPrimary,
-  },
-  weekdayText: {
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  statePanel: {
-    alignItems: 'flex-start',
+    fontSize: 15,
+    lineHeight: 21,
   },
   dangerPanel: {
     borderColor: rallyColors.statusDanger,
@@ -772,11 +741,10 @@ const styles = StyleSheet.create({
   },
   metricCell: {
     flex: 1,
-    minWidth: 96,
+    minWidth: 132,
     gap: rallySpacing.xxs,
     padding: rallySpacing.md,
     borderRadius: rallyRadius.card,
-    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: rallyColors.borderDefault,
     backgroundColor: rallyColors.bgInput,
@@ -791,21 +759,57 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: rallySpacing.xxs,
   },
-  inlineChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: rallySpacing.xs,
-  },
-  progressBlock: {
-    gap: rallySpacing.xs,
-  },
-  progressLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: rallySpacing.md,
-  },
   cardActions: {
+    gap: rallySpacing.xs,
+  },
+  sheetScreenRoot: {
+    flex: 1,
+    backgroundColor: rallyColors.bgApp,
+  },
+  sheetGhostContent: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    opacity: 0.36,
+  },
+  sheetGhostText: {
+    width: '100%',
+    maxWidth: rallyLayout.maxWidth,
+  },
+  sheetScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: rallyColors.scrim,
+  },
+  sheetPanel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    gap: rallySpacing.sm,
+    borderTopLeftRadius: rallyRadius.sheet,
+    borderTopRightRadius: rallyRadius.sheet,
+    borderWidth: 1,
+    borderColor: rallyColors.borderDefault,
+    backgroundColor: rallyColors.bgElevated,
+    paddingHorizontal: 28,
+    paddingTop: 14,
+  },
+  sheetHandle: {
+    width: 52,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: rallyColors.textMuted,
+  },
+  sheetHeaderRow: {
+    minHeight: rallyLayout.minTouchTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rallySpacing.sm,
+  },
+  sheetTitle: {
+    flex: 1,
+  },
+  sheetBody: {
     gap: rallySpacing.xs,
   },
 });
@@ -814,7 +818,7 @@ const textVariantStyles = StyleSheet.create({
   title: {
     fontSize: 32,
     lineHeight: 38,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   heading: {
     fontSize: 20,
@@ -824,12 +828,12 @@ const textVariantStyles = StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     lineHeight: 22,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   body: {
     fontSize: 15,
     lineHeight: 21,
-    fontWeight: '500',
+    fontWeight: '400',
   },
   supporting: {
     fontSize: 13,
@@ -839,13 +843,12 @@ const textVariantStyles = StyleSheet.create({
   micro: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontWeight: '600',
   },
   code: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '600',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
 });
@@ -857,10 +860,7 @@ const buttonVariantStyles = StyleSheet.create({
   secondary: {
     backgroundColor: rallyColors.bgInput,
     borderWidth: 1,
-    borderColor: rallyColors.actionPrimary,
-  },
-  social: {
-    backgroundColor: rallyColors.socialShared,
+    borderColor: rallyColors.borderDefault,
   },
   danger: {
     backgroundColor: rallyColors.bgInput,
@@ -872,6 +872,9 @@ const buttonVariantStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: rallyColors.borderDefault,
   },
+  success: {
+    backgroundColor: rallyColors.statusSuccess,
+  },
 });
 
 const chipToneStyles = StyleSheet.create({
@@ -879,28 +882,16 @@ const chipToneStyles = StyleSheet.create({
     backgroundColor: rallyColors.bgInput,
     borderColor: rallyColors.borderDefault,
   },
-  private: {
-    backgroundColor: 'rgba(41, 242, 198, 0.12)',
-    borderColor: rallyColors.statusPrivate,
-  },
-  shared: {
-    backgroundColor: 'rgba(255, 61, 242, 0.12)',
-    borderColor: rallyColors.socialShared,
-  },
   success: {
-    backgroundColor: 'rgba(167, 255, 63, 0.12)',
+    backgroundColor: 'rgba(34, 197, 94, 0.10)',
     borderColor: rallyColors.statusSuccess,
   },
-  warning: {
-    backgroundColor: 'rgba(255, 176, 0, 0.12)',
-    borderColor: rallyColors.statusWarning,
-  },
   danger: {
-    backgroundColor: 'rgba(255, 92, 122, 0.12)',
+    backgroundColor: 'rgba(239, 68, 68, 0.10)',
     borderColor: rallyColors.statusDanger,
   },
   primary: {
-    backgroundColor: rallyColors.actionPrimary,
+    backgroundColor: 'rgba(245, 158, 11, 0.10)',
     borderColor: rallyColors.actionPrimary,
   },
 });

@@ -7,7 +7,7 @@ export default function NotFoundScreen() {
         title="This Rally screen is not available"
         message="The route does not match a current Rally flow."
       />
-      <RallyButton href="/today">Go to Today</RallyButton>
+      <RallyButton href="/habits">Go to Habits</RallyButton>
     </RallyScreen>
   );
 }

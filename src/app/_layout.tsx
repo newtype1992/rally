@@ -20,10 +20,7 @@ export default function RootLayout() {
           }}>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="invite" options={{ headerShown: false }} />
-          <Stack.Screen name="shared-habit/[habitId]" options={{ title: 'Shared habit' }} />
+          <Stack.Screen name="(app)" options={{ headerShown: false }} />
           <Stack.Screen
             name="(modals)"
             options={{

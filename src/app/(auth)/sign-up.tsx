@@ -3,25 +3,16 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { z } from 'zod';
 
-import {
-  ErrorState,
-  FooterActions,
-  RallyButton,
-  RallyScreen,
-  StatePanel,
-  TextField,
-} from '@/components/rally/ui';
-import { applyZodErrors, messageFromError } from '@/lib/forms';
+import { ErrorState, FooterActions, RallyButton, RallyScreen, TextField } from '@/components/rally/ui';
+import { applyZodErrors } from '@/lib/forms';
 import { signUpWithEmail } from '@/lib/rally-api';
 
 type SignUpForm = {
-  displayName: string;
   email: string;
   password: string;
 };
 
 const signUpSchema = z.object({
-  displayName: z.string().trim().min(1, 'Add the name your buddies will see.'),
   email: z.string().trim().email('Enter a valid email.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
 });
@@ -36,7 +27,6 @@ export default function SignUpScreen() {
     formState: { errors, isSubmitting },
   } = useForm<SignUpForm>({
     defaultValues: {
-      displayName: '',
       email: '',
       password: '',
     },
@@ -50,46 +40,27 @@ export default function SignUpScreen() {
     }
     setApiError(null);
     try {
-      await signUpWithEmail(parsed.data.email, parsed.data.password, parsed.data.displayName);
-      router.replace('/first-habit');
-    } catch (error) {
-      setApiError(messageFromError(error));
+      await signUpWithEmail(parsed.data.email, parsed.data.password);
+      router.replace('/habits');
+    } catch {
+      setApiError('Something went wrong while creating your account. Try again.');
     }
   });
 
   return (
     <RallyScreen
-      title="Create account"
-      subtitle="Start with one private habit. Sharing stays optional."
+      title="Track your weekly habits privately."
+      subtitle="Create habits, mark them done, and see where each one stands this week."
       footer={
         <FooterActions>
           <RallyButton loading={isSubmitting} onPress={onSubmit}>
-            Continue
+            Sign up
           </RallyButton>
           <RallyButton variant="secondary" href="/log-in">
-            Log in instead
+            Log in
           </RallyButton>
         </FooterActions>
       }>
-      <StatePanel
-        title="Your first habit stays private"
-        message="You can invite friends to this one habit after setup without exposing anything else."
-        tone="private"
-      />
-      <Controller
-        control={control}
-        name="displayName"
-        render={({ field: { value, onChange } }) => (
-          <TextField
-            label="Display name"
-            value={value}
-            onChangeText={onChange}
-            autoCapitalize="words"
-            placeholder="Avery"
-            error={errors.displayName?.message}
-          />
-        )}
-      />
       <Controller
         control={control}
         name="email"
@@ -118,7 +89,7 @@ export default function SignUpScreen() {
           />
         )}
       />
-      {apiError ? <ErrorState title="Sign up failed" message={apiError} /> : null}
+      {apiError ? <ErrorState title="Something went wrong while creating your account." message={apiError} /> : null}
     </RallyScreen>
   );
 }

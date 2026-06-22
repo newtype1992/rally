@@ -1,157 +1,128 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
-  acceptInvite,
-  createHabitWithMembership,
-  createInvite,
-  getCalendarView,
-  getDailyView,
-  getInvitePreview,
-  getSharedHabitDetail,
-  getWeeklyView,
-  recordCheckin,
-  scheduleTargetChange,
-  updateReminderPreferences,
+  archiveHabit,
+  createHabit,
+  deleteHabit,
+  getHabitDetail,
+  getWeeklyProgress,
+  listActiveHabits,
+  markHabitDoneToday,
+  undoTodayCompletion,
 } from '@/lib/rally-api';
 import { getDeviceTimeZone, isoDateInTimeZone, sundayWeekStart } from '@/lib/date';
 import type {
-  AcceptInviteRequest,
-  CreateHabitWithMembershipRequest,
-  CreateInviteRequest,
-  GetCalendarViewRequest,
-  GetSharedHabitDetailRequest,
-  GetWeeklyViewRequest,
-  RecordCheckinRequest,
-  ScheduleTargetChangeRequest,
-  UpdateReminderPreferencesRequest,
+  ArchiveHabitRequest,
+  CreateHabitRequest,
+  DeleteHabitRequest,
+  GetHabitDetailRequest,
+  MarkHabitDoneTodayRequest,
+  UndoTodayCompletionRequest,
 } from '@/types/rally';
 
 export const queryKeys = {
-  daily: (localDate: string, timezone: string) => ['daily', localDate, timezone] as const,
-  invitePreview: (code: string) => ['invite-preview', code] as const,
-  weekly: (localWeekStart: string, timezone: string) => ['weekly', localWeekStart, timezone] as const,
-  calendar: (rangeStart: string, rangeEnd: string, timezone: string) =>
-    ['calendar', rangeStart, rangeEnd, timezone] as const,
-  sharedHabit: (habitId: string, localWeekStart: string, localDate: string, timezone: string) =>
-    ['shared-habit', habitId, localWeekStart, localDate, timezone] as const,
+  habits: (today: string, weekStart: string) => ['habits', today, weekStart] as const,
+  weeklyProgress: (today: string, weekStart: string) => ['weekly-progress', today, weekStart] as const,
+  habitDetail: (habitId: string, today: string, weekStart: string) =>
+    ['habit-detail', habitId, today, weekStart] as const,
 };
 
 export function useTodayContext() {
   const timezone = getDeviceTimeZone();
-  const localDate = isoDateInTimeZone(new Date(), timezone);
-  const localWeekStart = sundayWeekStart(localDate);
-  return { timezone, localDate, localWeekStart };
+  const today = isoDateInTimeZone(new Date(), timezone);
+  const weekStart = sundayWeekStart(today);
+  return { timezone, today, weekStart };
 }
 
-export function useDailyView(enabled = true) {
+export function useActiveHabits(enabled = true) {
   const context = useTodayContext();
   return useQuery({
-    queryKey: queryKeys.daily(context.localDate, context.timezone),
+    queryKey: queryKeys.habits(context.today, context.weekStart),
+    queryFn: () => listActiveHabits({ today: context.today, week_start: context.weekStart }),
+    enabled,
+  });
+}
+
+export function useWeeklyProgress(enabled = true) {
+  const context = useTodayContext();
+  return useQuery({
+    queryKey: queryKeys.weeklyProgress(context.today, context.weekStart),
+    queryFn: () => getWeeklyProgress({ today: context.today, week_start: context.weekStart }),
+    enabled,
+  });
+}
+
+export function useHabitDetail(habitId: string | null, enabled = true) {
+  const context = useTodayContext();
+  return useQuery({
+    queryKey: queryKeys.habitDetail(habitId ?? '', context.today, context.weekStart),
     queryFn: () =>
-      getDailyView({
-        local_date: context.localDate,
-        timezone: context.timezone,
-        include_shared_signals: true,
+      getHabitDetail({
+        habit_id: habitId ?? '',
+        today: context.today,
+        week_start: context.weekStart,
+        recent_limit: 84,
       }),
-    enabled,
-  });
-}
-
-export function useInvitePreview(inviteTokenOrCode: string | null) {
-  return useQuery({
-    queryKey: queryKeys.invitePreview(inviteTokenOrCode ?? ''),
-    queryFn: () => getInvitePreview({ invite_token_or_code: inviteTokenOrCode ?? '' }),
-    enabled: Boolean(inviteTokenOrCode),
-  });
-}
-
-export function useWeeklyView(input: GetWeeklyViewRequest, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.weekly(input.local_week_start, input.timezone),
-    queryFn: () => getWeeklyView(input),
-    enabled,
-    retry: false,
-  });
-}
-
-export function useCalendarView(input: GetCalendarViewRequest, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.calendar(input.range_start, input.range_end, input.timezone),
-    queryFn: () => getCalendarView(input),
-    enabled,
-    retry: false,
-  });
-}
-
-export function useSharedHabitDetail(input: GetSharedHabitDetailRequest, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.sharedHabit(
-      input.habit_id,
-      input.local_week_start,
-      input.local_date,
-      input.timezone,
-    ),
-    queryFn: () => getSharedHabitDetail(input),
-    enabled,
-    retry: false,
+    enabled: enabled && Boolean(habitId),
   });
 }
 
 export function useCreateHabitMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateHabitWithMembershipRequest) => createHabitWithMembership(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daily'] }),
-  });
-}
-
-export function useRecordCheckinMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: RecordCheckinRequest) => recordCheckin(input),
+    mutationFn: (input: CreateHabitRequest) => createHabit(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['daily'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
-      queryClient.invalidateQueries({ queryKey: ['shared-habit'] });
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-progress'] });
     },
   });
 }
 
-export function useCreateInviteMutation() {
+export function useMarkHabitDoneMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateInviteRequest) => createInvite(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['daily'] }),
+    mutationFn: (input: MarkHabitDoneTodayRequest) => markHabitDoneToday(input),
+    onSuccess: (_data, variables) => invalidateHabit(queryClient, variables.habit_id),
   });
 }
 
-export function useAcceptInviteMutation() {
+export function useUndoTodayCompletionMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: AcceptInviteRequest) => acceptInvite(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['daily'] });
-      queryClient.invalidateQueries({ queryKey: ['invite-preview'] });
-    },
+    mutationFn: (input: UndoTodayCompletionRequest) => undoTodayCompletion(input),
+    onSuccess: (_data, variables) => invalidateHabit(queryClient, variables.habit_id),
   });
 }
 
-export function useScheduleTargetChangeMutation() {
+export function useArchiveHabitMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: ScheduleTargetChangeRequest) => scheduleTargetChange(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['daily'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly'] });
-      queryClient.invalidateQueries({ queryKey: ['shared-habit'] });
-    },
+    mutationFn: (input: ArchiveHabitRequest) => archiveHabit(input),
+    onSuccess: (_data, variables) => invalidateHabit(queryClient, variables.habit_id),
   });
 }
 
-export function useUpdateReminderPreferencesMutation() {
+export function useDeleteHabitMutation() {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: UpdateReminderPreferencesRequest) => updateReminderPreferences(input),
-    retry: false,
+    mutationFn: (input: DeleteHabitRequest) => deleteHabit(input),
+    onSuccess: (_data, variables) => invalidateHabit(queryClient, variables.habit_id),
   });
+}
+
+export function habitDetailInput(habitId: string): GetHabitDetailRequest {
+  const timezone = getDeviceTimeZone();
+  const today = isoDateInTimeZone(new Date(), timezone);
+  return {
+    habit_id: habitId,
+    today,
+    week_start: sundayWeekStart(today),
+    recent_limit: 84,
+  };
+}
+
+function invalidateHabit(queryClient: ReturnType<typeof useQueryClient>, habitId: string) {
+  queryClient.invalidateQueries({ queryKey: ['habits'] });
+  queryClient.invalidateQueries({ queryKey: ['weekly-progress'] });
+  queryClient.invalidateQueries({ queryKey: ['habit-detail', habitId] });
 }
