@@ -8,17 +8,23 @@ import {
   getWeeklyProgress,
   listActiveHabits,
   markHabitDoneToday,
+  RallyApiError,
   undoTodayCompletion,
 } from '@/lib/rally-api';
+import {
+  archiveHabitCommand,
+  createHabitCommand,
+  deleteHabitCommand,
+  markHabitDoneCommand,
+  undoHabitCompletionCommand,
+  type ActionContext,
+  type ActionResult,
+} from '@/lib/habit-commands';
+import { invalidateHabitQueries } from '@/lib/habit-query-invalidation';
 import { getDeviceTimeZone, isoDateInTimeZone, sundayWeekStart } from '@/lib/date';
-import type {
-  ArchiveHabitRequest,
-  CreateHabitRequest,
-  DeleteHabitRequest,
-  GetHabitDetailRequest,
-  MarkHabitDoneTodayRequest,
-  UndoTodayCompletionRequest,
-} from '@/types/rally';
+import type { GetHabitDetailRequest } from '@/types/rally';
+
+const commandTransport = { createHabit, markHabitDoneToday, undoTodayCompletion, archiveHabit, deleteHabit };
 
 export const queryKeys = {
   habits: (today: string, weekStart: string) => ['habits', today, weekStart] as const,
@@ -69,8 +75,10 @@ export function useHabitDetail(habitId: string | null, enabled = true) {
 
 export function useCreateHabitMutation() {
   const queryClient = useQueryClient();
+  const context = useTodayContext();
   return useMutation({
-    mutationFn: (input: CreateHabitRequest) => createHabit(input),
+    mutationFn: (input: { name: string; weeklyTarget: number }) =>
+      unwrapAction(createHabitCommand(input, actionContext(context), commandTransport)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['habits'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-progress'] });
@@ -80,33 +88,39 @@ export function useCreateHabitMutation() {
 
 export function useMarkHabitDoneMutation() {
   const queryClient = useQueryClient();
+  const context = useTodayContext();
   return useMutation({
-    mutationFn: (input: MarkHabitDoneTodayRequest) => markHabitDoneToday(input),
-    onSuccess: (_data, variables) => invalidateHabit(queryClient, variables.habit_id),
+    mutationFn: (input: { habitId: string }) => unwrapAction(markHabitDoneCommand(input, actionContext(context), commandTransport)),
+    onSuccess: (_data, variables) => invalidateHabitQueries(queryClient, variables.habitId),
   });
 }
 
 export function useUndoTodayCompletionMutation() {
   const queryClient = useQueryClient();
+  const context = useTodayContext();
   return useMutation({
-    mutationFn: (input: UndoTodayCompletionRequest) => undoTodayCompletion(input),
-    onSuccess: (_data, variables) => invalidateHabit(queryClient, variables.habit_id),
+    mutationFn: (input: { habitId: string }) => unwrapAction(undoHabitCompletionCommand(input, actionContext(context), commandTransport)),
+    onSuccess: (_data, variables) => invalidateHabitQueries(queryClient, variables.habitId),
   });
 }
 
 export function useArchiveHabitMutation() {
   const queryClient = useQueryClient();
+  const context = useTodayContext();
   return useMutation({
-    mutationFn: (input: ArchiveHabitRequest) => archiveHabit(input),
-    onSuccess: (_data, variables) => invalidateHabit(queryClient, variables.habit_id),
+    mutationFn: (input: { habitId: string; confirmation: 'explicit' }) =>
+      unwrapAction(archiveHabitCommand(input, actionContext(context, input.confirmation), commandTransport)),
+    onSuccess: (_data, variables) => invalidateHabitQueries(queryClient, variables.habitId),
   });
 }
 
 export function useDeleteHabitMutation() {
   const queryClient = useQueryClient();
+  const context = useTodayContext();
   return useMutation({
-    mutationFn: (input: DeleteHabitRequest) => deleteHabit(input),
-    onSuccess: (_data, variables) => invalidateHabit(queryClient, variables.habit_id),
+    mutationFn: (input: { habitId: string; confirmation: 'explicit' }) =>
+      unwrapAction(deleteHabitCommand(input, actionContext(context, input.confirmation), commandTransport)),
+    onSuccess: (_data, variables) => invalidateHabitQueries(queryClient, variables.habitId),
   });
 }
 
@@ -121,8 +135,15 @@ export function habitDetailInput(habitId: string): GetHabitDetailRequest {
   };
 }
 
-function invalidateHabit(queryClient: ReturnType<typeof useQueryClient>, habitId: string) {
-  queryClient.invalidateQueries({ queryKey: ['habits'] });
-  queryClient.invalidateQueries({ queryKey: ['weekly-progress'] });
-  queryClient.invalidateQueries({ queryKey: ['habit-detail', habitId] });
+function actionContext(
+  context: ReturnType<typeof useTodayContext>,
+  confirmation?: 'explicit',
+): ActionContext {
+  return { source: 'ui', localDate: context.today, timeZone: context.timezone, confirmation };
+}
+
+async function unwrapAction<T>(resultPromise: Promise<ActionResult<T>>) {
+  const result = await resultPromise;
+  if (!result.ok) throw new RallyApiError(result.error);
+  return result;
 }

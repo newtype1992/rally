@@ -12,7 +12,7 @@ export default function ArchiveHabitModal() {
   const archiveHabit = useArchiveHabitMutation();
 
   const archive = async () => {
-    await archiveHabit.mutateAsync({ habit_id: habitId });
+    await archiveHabit.mutateAsync({ habitId, confirmation: 'explicit' });
     router.replace('/habits');
   };
 

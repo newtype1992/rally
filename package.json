@@ -26,9 +26,11 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/react": "~19.1.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",
+    "tsx": "^4.22.4",
     "typescript": "~5.9.2"
   },
   "scripts": {
@@ -38,7 +40,13 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "doctor": "npx expo-doctor"
+    "doctor": "npx expo-doctor",
+    "test:commands": "tsx --env-file=.env --test tests/habit-commands.test.ts",
+    "test:streaks": "playwright test e2e/streak-classifier.spec.ts --config=playwright.streak.config.ts",
+    "test:e2e:habits": "playwright test e2e/create-three-habits.spec.ts",
+    "supabase:reset": "supabase db reset",
+    "supabase:test": "supabase test db",
+    "supabase:lint": "supabase db lint"
   },
   "private": true
 }

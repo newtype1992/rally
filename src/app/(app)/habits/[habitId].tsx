@@ -89,14 +89,14 @@ export default function HabitDetailScreen() {
             <RallyButton
               variant="secondary"
               loading={undo.isPending}
-              onPress={() => undo.mutate({ habit_id: habit.habit_id, completion_date: context.today })}>
+              onPress={() => undo.mutate({ habitId: habit.habit_id })}>
               Undo
             </RallyButton>
           </View>
         ) : (
           <RallyButton
             loading={markDone.isPending}
-            onPress={() => markDone.mutate({ habit_id: habit.habit_id, completion_date: context.today })}>
+            onPress={() => markDone.mutate({ habitId: habit.habit_id })}>
             Mark done
           </RallyButton>
         )}

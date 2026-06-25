@@ -50,7 +50,7 @@ export default function CreateHabitScreen() {
 
     await createHabit.mutateAsync({
       name: parsed.data.name,
-      weekly_target: parsed.data.weeklyTarget,
+      weeklyTarget: parsed.data.weeklyTarget,
     });
     resetDraft();
     router.dismissTo('/habits');
