@@ -12,7 +12,7 @@ export default function DeleteHabitModal() {
   const deleteHabit = useDeleteHabitMutation();
 
   const remove = async () => {
-    await deleteHabit.mutateAsync({ habit_id: habitId });
+    await deleteHabit.mutateAsync({ habitId, confirmation: 'explicit' });
     router.replace('/habits');
   };
 

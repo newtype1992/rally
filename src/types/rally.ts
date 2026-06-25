@@ -92,6 +92,7 @@ export type MarkHabitDoneTodayRequest = {
 
 export type MarkHabitDoneTodayResponse = {
   habit: HabitSummary;
+  outcome?: 'completed' | 'already_complete';
 };
 
 export type UndoTodayCompletionRequest = {
@@ -101,6 +102,7 @@ export type UndoTodayCompletionRequest = {
 
 export type UndoTodayCompletionResponse = {
   habit: HabitSummary;
+  outcome?: 'removed' | 'already_absent';
 };
 
 export type GetWeeklyProgressRequest = {
@@ -130,6 +132,7 @@ export type ArchiveHabitRequest = {
 export type ArchiveHabitResponse = {
   habit_id: Uuid;
   status: 'archived';
+  outcome?: 'archived' | 'already_archived';
 };
 
 export type DeleteHabitRequest = {
@@ -139,4 +142,5 @@ export type DeleteHabitRequest = {
 export type DeleteHabitResponse = {
   habit_id: Uuid;
   status: 'deleted';
+  outcome?: 'deleted' | 'already_deleted';
 };

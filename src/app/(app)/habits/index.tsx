@@ -10,14 +10,12 @@ import {
 import {
   useActiveHabits,
   useMarkHabitDoneMutation,
-  useTodayContext,
   useUndoTodayCompletionMutation,
 } from '@/hooks/use-rally-data';
 import { messageFromError } from '@/lib/forms';
 
 export default function HabitsDashboardScreen() {
   const router = useRouter();
-  const context = useTodayContext();
   const habits = useActiveHabits();
   const markDone = useMarkHabitDoneMutation();
   const undo = useUndoTodayCompletionMutation();
@@ -89,14 +87,12 @@ export default function HabitsDashboardScreen() {
               onOpen={() => router.push(`/habits/${habit.habit_id}` as never)}
               onMarkDone={() =>
                 markDone.mutate({
-                  habit_id: habit.habit_id,
-                  completion_date: context.today,
+                  habitId: habit.habit_id,
                 })
               }
               onUndo={() =>
                 undo.mutate({
-                  habit_id: habit.habit_id,
-                  completion_date: context.today,
+                  habitId: habit.habit_id,
                 })
               }
             />

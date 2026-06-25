@@ -55,9 +55,4 @@ supabase/.temp/
 
 # local-only repository files
 /AGENTS.md
-/LIFECYCLE.md
 /.vscode/
-/supabase/
-/e2e/
-/playwright.config.ts
-/playwright.streak.config.ts
