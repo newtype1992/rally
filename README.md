@@ -78,6 +78,6 @@ The repository contains app source and build configuration only. Approved produc
 
 ## Current Scope
 
-The September visual rebuild refreshes authentication, habit cards, create/detail screens, and confirmation sheets while preserving personal-only V1. See [redesign notes and verification limits](docs/rally-redesign.md). Run `npx playwright test e2e/redesign.spec.ts` for isolated UI regressions; this is separate from live-backend verification.
+The approved Midnight / Newtype design refreshes authentication, habit cards, create/detail screens, and confirmation sheets while preserving personal-only V1. See [Midnight implementation and verification limits](docs/midnight-design.md). Run `npx playwright test e2e/redesign.spec.ts` for isolated UI regressions; this is separate from live-backend verification. The in-app vector mark uses Expo-compatible `react-native-svg`.
 
 Rally does not currently include shared habits, invites, nudges, rankings, social activity, reminder notifications, avatar uploads, analytics, or app-store deployment configuration.

@@ -6,6 +6,8 @@ Rally has moved from Newtype planning into implementation. This repo is now the 
 
 The current implementation target is personal-only V1: one signed-in user manages their own habits, completes today's habits, reviews weekly progress, and archives or deletes habits.
 
+The user approved the Midnight / Newtype revision 02 local visual board and requested implementation on September 9, 2026. See `docs/midnight-design.md` for the implementation decision and device verification boundary. This approval supersedes earlier visual tokens, not the approved data/API behaviour. Figma remains unchanged; no release or store-icon approval is implied.
+
 ## Workspace Boundary
 
 - Planning source of truth: `C:\Users\Kareem\Newtype\04-ideas\habit-tracker-concept`

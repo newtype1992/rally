@@ -63,10 +63,12 @@ test('redesigned core flow, accessibility targets, isolated mutations and screen
   await fixture(page);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
   await page.goto('/');
   await expect(page).toHaveURL(/log-in$/);
   await expect(page.getByRole('button', { name: 'Log in', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Back', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Made by Newtype', { exact: true })).toBeVisible();
   await page.screenshot({ path: info.outputPath('01-login.png') });
   await page.getByRole('tab', { name: 'Sign up' }).click();
   await expect(page).toHaveURL(/sign-up$/);
@@ -75,6 +77,7 @@ test('redesigned core flow, accessibility targets, isolated mutations and screen
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue('');
   await login(page);
   await page.screenshot({ path: info.outputPath('03-dashboard.png') });
+  await expect(page.getByText('Your habits.', { exact: true })).toHaveCSS('color', 'rgb(242, 245, 250)');
   const addBounds = await page.getByRole('link', { name: 'Add habit' }).boundingBox();
   expect(addBounds?.width).toBeGreaterThanOrEqual(44);
   expect(addBounds?.height).toBeGreaterThanOrEqual(44);
@@ -89,6 +92,9 @@ test('redesigned core flow, accessibility targets, isolated mutations and screen
   await expect(page.getByRole('button', { name: 'Create habit', exact: true })).toBeDisabled();
   await page.getByLabel('Weekly target', { exact: true }).fill('3');
   await page.screenshot({ path: info.outputPath('04-create.png') });
+  const footer = await page.getByTestId('sheet-action-footer').boundingBox();
+  expect(footer!.y + footer!.height).toBeLessThanOrEqual(852);
+  expect(footer!.y).toBeGreaterThan(600);
   await page.getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('link', { name: 'Add habit' }).click();
   await expect(page.getByLabel('Habit name', { exact: true })).toHaveValue('A mindful morning');
@@ -101,12 +107,12 @@ test('redesigned core flow, accessibility targets, isolated mutations and screen
   await expect(page.getByRole('button', { name: 'Hide completion dates' })).toBeVisible();
   await page.screenshot({ path: info.outputPath('05-history.png') });
   await page.getByRole('button', { name: 'Delete habit', exact: true }).click();
-  await expect(page.getByText('Let this habit go?', { exact: true })).toBeVisible();
+  await expect(page.getByText('Delete this habit?', { exact: true })).toBeVisible();
   await page.screenshot({ path: info.outputPath('06-delete.png') });
-  await page.getByRole('button', { name: 'Keep this habit' }).click();
+  await page.getByRole('button', { name: 'Cancel' }).click();
   await expect(page).toHaveURL(/habits\//);
   await page.getByRole('button', { name: 'Archive habit', exact: true }).click();
-  await expect(page.getByText('A little room to reset.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Archive this habit?', { exact: true })).toBeVisible();
   await page.screenshot({ path: info.outputPath('07-archive.png') });
   await page.getByRole('button', { name: 'Archive habit', exact: true }).click();
   await expect(page).toHaveURL(/habits$/);
@@ -148,4 +154,35 @@ test('50 habits use a bounded initial render and offline actions are explained',
   await expect(page.getByRole('button', { name: 'Mark done', exact: true }).first()).toBeDisabled();
   await context.setOffline(false);
   await expect(page.getByRole('button', { name: 'Mark done', exact: true }).first()).toBeEnabled();
+});
+
+test('Midnight layout keeps long names and form actions reachable across mobile widths', async ({ page }, info) => {
+  await fixture(page);
+  await login(page);
+  const longName = 'Read one chapter of the book I have been meaning to finish';
+  for (const width of [320, 393, 430]) {
+    await page.setViewportSize({ width, height: 640 });
+    await page.getByRole('link', { name: 'Add habit' }).click();
+    await page.getByLabel('Habit name', { exact: true }).fill(longName);
+    await page.getByLabel('Weekly target', { exact: true }).fill('1.5');
+    await expect(page.getByRole('button', { name: 'Create habit', exact: true })).toBeDisabled();
+    await page.getByLabel('Weekly target', { exact: true }).fill('8');
+    // Design work must not silently introduce a maximum target of seven.
+    await expect(page.getByRole('button', { name: 'Create habit', exact: true })).toBeEnabled();
+    await page.setViewportSize({ width, height: 460 });
+    const footer = await page.getByTestId('sheet-action-footer').boundingBox();
+    expect(footer!.y + footer!.height).toBeLessThanOrEqual(460);
+    const cancel = page.getByRole('button', { name: 'Cancel', exact: true });
+    await expect(cancel).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await cancel.click();
+  }
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.getByRole('link', { name: 'Add habit' }).click();
+  await expect(page.getByLabel('Habit name', { exact: true })).toHaveValue(longName);
+  await page.getByRole('button', { name: 'Create habit', exact: true }).click();
+  await page.getByRole('button', { name: 'Open ' + longName, exact: true }).click();
+  await expect(page.getByRole('heading', { name: longName, exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('09-long-name-small.png') });
 });

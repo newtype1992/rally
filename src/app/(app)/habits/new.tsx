@@ -70,14 +70,22 @@ export default function CreateHabitScreen() {
   return (
     <RallyScreen
       sheet
-      eyebrow="ONE SMALL COMMITMENT"
       title="What do you want to track?"
-      subtitle="Choose something that matters to you. Give it a little space in your week."
+      subtitle="Start with one small commitment."
+      footer={<FooterActions>
+        <RallyButton disabled={!online || !createHabitSchema.safeParse(values).success} loading={isSubmitting || createHabit.isPending} onPress={onSubmit}>
+          {isSubmitting || createHabit.isPending ? 'Saving…' : 'Create habit'}
+        </RallyButton>
+        <RallyButton variant="ghost" onPress={dismiss} disabled={isSubmitting} style={{ minHeight: 44, paddingVertical: 10 }}>
+          Cancel
+        </RallyButton>
+      </FooterActions>}
       rightAction={{
         icon: 'close',
         accessibilityLabel: 'Close Create Habit',
         onPress: dismiss,
         tone: 'muted',
+        appearance: 'quiet',
       }}>
       <Stack.Screen options={{ gestureEnabled: !isSubmitting }} />
       <Controller
@@ -94,7 +102,7 @@ export default function CreateHabitScreen() {
               updateDraft({ name: next });
               onChange(next);
             }}
-            placeholder="Gym"
+            placeholder="e.g. Reading"
             helper="Example: Gym, Reading, Running"
             error={errors.name?.message}
             testID="habit-name-input"
@@ -117,7 +125,7 @@ export default function CreateHabitScreen() {
             }}
             keyboardType="number-pad"
             placeholder="3"
-            helper="How many days per week? You can mark a habit done once each day."
+            helper="How many times per week? You can mark a habit done once each day."
             error={errors.weeklyTarget?.message}
             testID="weekly-target-input"
           />
@@ -129,14 +137,6 @@ export default function CreateHabitScreen() {
           message={`Your details are still here, so you can try again. ${messageFromError(createHabit.error)}`}
         />
       ) : null}
-      <FooterActions>
-        <RallyButton disabled={!online || !createHabitSchema.safeParse(values).success} loading={isSubmitting || createHabit.isPending} onPress={onSubmit}>
-          Create habit
-        </RallyButton>
-        <RallyButton variant="ghost" onPress={dismiss} disabled={isSubmitting}>
-          Cancel
-        </RallyButton>
-      </FooterActions>
     </RallyScreen>
   );
 

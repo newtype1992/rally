@@ -63,22 +63,22 @@ test('runs the personal V1 habit flow', async ({ page }, testInfo) => {
   await expect(page.getByRole('button', { name: 'Mark done' })).toBeVisible();
 
   await page.getByText('Archive habit', { exact: true }).click();
-  await expect(page.getByText('A little room to reset.', { exact: true }).last()).toBeVisible();
+  await expect(page.getByText('Archive this habit?', { exact: true }).last()).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(page).toHaveURL(/\/habits\//);
 
   await page.getByText('Archive habit', { exact: true }).click();
-  await expect(page.getByText('A little room to reset.', { exact: true }).last()).toBeVisible();
-  await page.getByRole('button', { name: 'Keep this habit' }).click();
+  await expect(page.getByText('Archive this habit?', { exact: true }).last()).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel' }).click();
 
   await page.getByText('Delete habit', { exact: true }).click();
-  await expect(page.getByText('Let this habit go?', { exact: true }).last()).toBeVisible();
+  await expect(page.getByText('Delete this habit?', { exact: true }).last()).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(page).toHaveURL(/\/habits\//);
 
   await page.getByText('Delete habit', { exact: true }).click();
-  await expect(page.getByText('Let this habit go?', { exact: true }).last()).toBeVisible();
-  await page.getByRole('button', { name: 'Keep this habit' }).click();
+  await expect(page.getByText('Delete this habit?', { exact: true }).last()).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel' }).click();
 
   await page.getByLabel('Back').click();
   await page.getByLabel('Add habit').click();
@@ -89,7 +89,7 @@ test('runs the personal V1 habit flow', async ({ page }, testInfo) => {
 
 async function logIn(page: Page) {
   await page.goto('/log-in');
-  await expect(page.getByText('Small steps.', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Make room.*for progress\./)).toBeVisible();
 
   await replaceText(page.getByLabel('Email', { exact: true }), seededUser.email);
   await replaceText(page.getByLabel('Password', { exact: true }), seededUser.password);

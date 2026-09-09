@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
-import { Brand, ErrorState, Eyebrow, RallyButton, RallyScreen, RallyText, TextField } from '@/components/rally/ui';
+import { Brand, ErrorState, RallyButton, RallyScreen, RallyText, StudioSignature, TextField } from '@/components/rally/ui';
 import { rallyColors as c } from '@/constants/rally';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { signInWithEmail, signUpWithEmail } from '@/lib/rally-api';
@@ -45,18 +45,13 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
         : 'We couldn’t log you in. Check your email and password, then try again.');
     }
   });
-  return <RallyScreen contentStyle={{ gap: 28 }}>
-    <View style={s.brandRow}><Brand /><Eyebrow>MADE FOR YOU</Eyebrow></View>
+  return <RallyScreen contentStyle={{ gap: 27, paddingTop: 12 }}>
+    <Brand />
     <View style={s.hero}>
-      <RallyText style={s.heroText}>Small steps.</RallyText>
-      <RallyText color={c.actionPrimary} style={s.heroText}>Real progress.</RallyText>
+      <RallyText variant="title" style={s.heroText}>Make room{"\n"}for progress.</RallyText>
       <RallyText variant="supporting" style={{ maxWidth: 285, marginTop: 12 }}>
-        A little space for the habits that matter.{"\n"}Track your week. Find your own rhythm.
+        Track your weekly habits privately.{"\n"}One small commitment at a time.
       </RallyText>
-      <View style={s.rhythm} accessible accessibilityLabel="Rally. Progress at your own pace.">
-        {[18, 28, 23, 39, 32, 48, 56].map((height, i) => <View key={i} style={[s.rhythmBar, { height, backgroundColor: i === 6 ? c.actionPrimary : '#4A4938' }]} />)}
-        <View style={{ flex: 1 }} /><RallyText variant="micro">A LITTLE, OFTEN.</RallyText>
-      </View>
     </View>
     <View style={s.form}>
       <View style={s.tabs} accessibilityRole="tablist">
@@ -64,12 +59,8 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
           accessibilityLabel={tab === 'login' ? 'Log in' : 'Sign up'} accessibilityState={{ selected: mode === tab, disabled: isSubmitting }}
           disabled={isSubmitting} onPress={() => { if (mode !== tab) router.replace(tab === 'login' ? '/log-in' : '/sign-up'); }}
           style={[s.tab, mode === tab && s.activeTab]}>
-          <RallyText color={mode === tab ? c.textPrimary : c.textMuted} style={{ fontWeight: '600' }}>{tab === 'login' ? 'Log in' : 'Sign up'}</RallyText>
+          <RallyText color={mode === tab ? c.actionPrimary : c.textSecondary} style={{ fontSize: 14, fontWeight: '600' }}>{tab === 'login' ? 'Log in' : 'Sign up'}</RallyText>
         </Pressable>)}
-      </View>
-      <View style={{ gap: 4 }}>
-        <RallyText variant="heading">{signup ? 'Start your own rhythm.' : 'Welcome back.'}</RallyText>
-        <RallyText variant="supporting">{signup ? 'Your first habit starts here.' : 'Your habits are right where you left them.'}</RallyText>
       </View>
       <Controller control={control} name="email" rules={{ validate: (v) => z.string().trim().email().safeParse(v).success || 'Enter a valid email.' }}
         render={({ field }) => <TextField label="Email" value={field.value} onChangeText={field.onChange} onBlur={field.onBlur}
@@ -81,19 +72,16 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
           error={errors.password?.message} />} />
       {apiError ? <ErrorState title="Let’s try that again." message={apiError} /> : null}
       {confirmation ? <View accessibilityRole="alert"><RallyText>Check your email to confirm your account, then return to Log in.</RallyText></View> : null}
-      <RallyButton disabled={!ready || !valid || !online || confirmation} loading={isSubmitting} onPress={onSubmit}>{signup ? 'Create account' : 'Log in'}</RallyButton>
+      <RallyButton disabled={!ready || !valid || !online || confirmation} loading={isSubmitting} onPress={onSubmit}>{isSubmitting ? signup ? 'Creating account…' : 'Signing in…' : signup ? 'Sign up' : 'Log in'}</RallyButton>
     </View>
-    <RallyText variant="micro" style={{ textAlign: 'center' }}>Your habits. Your pace. Always private.</RallyText>
+    <StudioSignature />
   </RallyScreen>;
 }
 const s = StyleSheet.create({
-  brandRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  hero: { paddingTop: 12 },
-  heroText: { fontSize: 44, lineHeight: 49, fontWeight: '600', letterSpacing: -1.8 },
-  rhythm: { flexDirection: 'row', alignItems: 'flex-end', gap: 7, paddingVertical: 20, marginTop: 8, borderBottomWidth: 1, borderBottomColor: c.borderDefault },
-  rhythmBar: { width: 12, borderRadius: 4 },
+  hero: { paddingTop: 11 },
+  heroText: { fontSize: 33, lineHeight: 38, fontWeight: '600', letterSpacing: -1.1 },
   form: { gap: 20 },
-  tabs: { flexDirection: 'row', backgroundColor: c.bgSurface, borderRadius: 14, padding: 4 },
-  tab: { flex: 1, minHeight: 46, alignItems: 'center', justifyContent: 'center', padding: 10, borderRadius: 10 },
+  tabs: { flexDirection: 'row', backgroundColor: c.bgSurface, borderRadius: 12, padding: 4 },
+  tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', padding: 10, borderRadius: 9 },
   activeTab: { backgroundColor: c.bgElevated },
 });

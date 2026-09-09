@@ -42,6 +42,7 @@ export default function AppLayout() {
           sheetGrabberVisible: true,
           sheetLargestUndimmedDetentIndex: 'none',
           sheetExpandsWhenScrolledToEdge: false,
+          contentStyle: { backgroundColor: rallyColors.bgSurface },
         }}
       />
       <Stack.Screen
