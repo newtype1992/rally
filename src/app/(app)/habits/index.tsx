@@ -8,7 +8,7 @@ import { rallyColors as c } from '@/constants/rally';
 import { useActiveHabits, useMarkHabitDoneMutation, useUndoTodayCompletionMutation, useTodayContext } from '@/hooks/use-rally-data';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { signOut } from '@/lib/rally-api';
-import { addDays } from '@/lib/date';
+import { formatWeekRange } from '@/lib/date';
 import type { HabitSummary } from '@/types/rally';
 
 const HabitRow = memo(function HabitRow({ habit, online }: { habit: HabitSummary; online: boolean }) {
@@ -34,8 +34,7 @@ export default function HabitsDashboardScreen() {
   const [leaving, setLeaving] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
   const rows = habits.data?.habits ?? [];
-  const weekFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-  const date = 'This week · ' + weekFormatter.formatRange(new Date(weekStart + 'T12:00:00Z'), new Date(addDays(weekStart, 6) + 'T12:00:00Z'));
+  const date = 'This week · ' + formatWeekRange(weekStart);
   const logOut = async () => {
     setLeaving(true);
     setLogoutError(false);

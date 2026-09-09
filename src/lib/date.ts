@@ -22,6 +22,19 @@ export function addDays(localDate: LocalDate, dayCount: number): LocalDate {
   return date.toISOString().slice(0, 10);
 }
 
+/** Format a Sunday-start week without Intl.formatRange (missing on some mobile runtimes). */
+export function formatWeekRange(weekStart: SundayWeekStart): string {
+  const start = new Date(`${weekStart}T12:00:00Z`);
+  const end = new Date(`${addDays(weekStart, 6)}T12:00:00Z`);
+  const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
+  const sameMonth = sameYear && start.getUTCMonth() === end.getUTCMonth();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    month: 'short', day: 'numeric', timeZone: 'UTC',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
+  return `${formatter.format(start)}–${sameMonth ? end.getUTCDate() : formatter.format(end)}`;
+}
+
 export function weekdayForDate(localDate: LocalDate): Weekday {
   return new Date(`${localDate}T00:00:00.000Z`).getUTCDay() as Weekday;
 }

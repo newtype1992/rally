@@ -36,3 +36,9 @@ Reference: `C:/Users/Kareem/.codex/visualizations/2026/06/29/019f1396-8aac-73c1-
 Native follow-up: open and resize Create Habit at both sheet detents, type with the keyboard visible, reach both actions, dismiss/reopen the draft, save, and check large text and screen-reader navigation. Browser verification and an iOS bundle build are not a substitute for physical-device testing. Backend schema/commands were unchanged; live-backend integration tests were not rerun for this visual pass.
 
 The earlier `docs/create-habit-blank-sheet.md` describes the previous intrinsic-scroll workaround. Fixed-footer sheets now use the bounded layout described here; sheets without footers retain that workaround.
+
+## Mobile week-label compatibility fix
+
+The mobile dashboard reported `TypeError: undefined is not a function` at the new `Intl.DateTimeFormat.formatRange` call. Replaced it with `formatWeekRange`, which uses supported individual date formatting and UTC calendar arithmetic. The compact label is preserved, including month/year boundaries. No polyfill, data or dependency change is needed.
+
+`npm run test:dates` explicitly removes `formatRange` while checking ordinary weeks, cross-month/year weeks, leap years and a daylight-saving transition week. The browser core-flow regression now removes that method before the app loads, so desktop support cannot hide this failure again. Physical-device reload remains the final native confirmation.

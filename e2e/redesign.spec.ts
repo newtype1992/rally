@@ -60,6 +60,10 @@ async function login(page: Page) {
   await expect(page.getByText('Your habits.', { exact: true })).toBeVisible();
 }
 test('redesigned core flow, accessibility targets, isolated mutations and screenshots', async ({ page }, info) => {
+  // Match the mobile runtime that reported the dashboard crash.
+  await page.addInitScript(() => {
+    Object.defineProperty(Intl.DateTimeFormat.prototype, 'formatRange', { configurable: true, value: undefined });
+  });
   await fixture(page);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));

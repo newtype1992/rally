@@ -50,6 +50,7 @@
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor",
     "test:commands": "tsx --env-file=.env --test tests/habit-commands.test.ts",
+    "test:dates": "tsx --test tests/date.test.ts",
     "test:streaks": "playwright test e2e/streak-classifier.spec.ts --config=playwright.streak.config.ts",
     "test:e2e:habits": "playwright test e2e/create-three-habits.spec.ts",
     "supabase:reset": "supabase db reset",
