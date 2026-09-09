@@ -3,7 +3,9 @@ export type QueryInvalidator = {
 };
 
 export function invalidateHabitQueries(queryClient: QueryInvalidator, habitId: string) {
-  queryClient.invalidateQueries({ queryKey: ['habits'] });
-  queryClient.invalidateQueries({ queryKey: ['weekly-progress'] });
-  queryClient.invalidateQueries({ queryKey: ['habit-detail', habitId] });
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['habits'] }),
+    queryClient.invalidateQueries({ queryKey: ['weekly-progress'] }),
+    queryClient.invalidateQueries({ queryKey: ['habit-detail', habitId] }),
+  ]);
 }

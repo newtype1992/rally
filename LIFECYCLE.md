@@ -38,6 +38,10 @@ npm run supabase:lint
 
 ## Current Frontend Checkpoint
 
+SDK compatibility checkpoint (September 2026): Expo was upgraded incrementally from SDK 54 through 55 and 56 to **57.0.21**, with React Native 0.86.3 and React 19.2.3. Use SDK 57 Expo Go and Node 24 LTS for the current preview. [Upgrade verification](docs/expo-sdk-57-upgrade.md) records checks and remaining limits. This is a development-runtime upgrade, not authorization for EAS deployment or new native product features.
+
+September 2026: a user-authorized visual rebuild now covers the same personal-only V1 screens. [Redesign notes](docs/rally-redesign.md) record component rules, regression coverage, and pending native-device/live-backend checks. This does not advance Rally into production deployment or change backend lifecycle boundaries. The previous Figma artifact has not yet been synchronized with the new UI.
+
 The personal-only V1 frontend keeps the app surface intentionally narrow:
 
 - `src/app/(auth)/log-in.tsx`

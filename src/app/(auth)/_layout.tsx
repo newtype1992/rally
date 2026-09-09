@@ -5,8 +5,13 @@ import { rallyColors } from '@/constants/rally';
 export default function AuthLayout() {
   return (
     <Stack
+      initialRouteName="log-in"
       screenOptions={{
         contentStyle: { backgroundColor: rallyColors.bgApp },
+        gestureEnabled: false,
+        headerBackVisible: false,
+        headerShown: false,
+        animation: 'fade',
         headerStyle: { backgroundColor: rallyColors.bgApp },
         headerShadowVisible: false,
         headerTintColor: rallyColors.textPrimary,

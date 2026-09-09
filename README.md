@@ -14,7 +14,7 @@ Rally is a personal habit tracker built with Expo and React Native. Signed-in us
 
 ## Prerequisites
 
-- A supported Node.js and npm installation
+- Node.js 24 LTS recommended (`.node-version`); Node 22.13+ is the project minimum, with a supported npm installation
 - An Expo-compatible Android, iOS, or web development environment
 - A hosted Supabase project with email/password authentication enabled
 - A deployed Rally-compatible database schema and RPC contract
@@ -51,6 +51,18 @@ npm run typecheck
 npm run doctor
 ```
 
+## Expo Go compatibility
+
+Rally uses **Expo SDK 57**. Use a matching SDK 57 Expo Go client; the SDK 54 preview is no longer compatible. The production URL scheme remains `rally`.
+
+On Windows, `scripts/start-mobile.ps1` starts a LAN QR preview using an explicit Node 24.3+ runtime and system-trusted certificates:
+
+```powershell
+powershell -NoProfile -NoExit -File .\scripts\start-mobile.ps1 -NodePath C:\path\to\node.exe
+```
+
+The running Codex-created preview uses the bundled Node 24 runtime, without changing your global Node or npm settings. Future terminals must also use a supported runtime. See [SDK upgrade verification and known limits](docs/expo-sdk-57-upgrade.md).
+
 ## App Capabilities
 
 - Email/password sign-up, sign-in, persisted sessions, and sign-out
@@ -62,8 +74,10 @@ npm run doctor
 - Habit archive and permanent deletion flows
 - Network-aware query behavior
 
-The repository contains app source and build configuration only. Backend deployment source, local backend tooling, internal planning material, and end-to-end test infrastructure are maintained separately.
+The repository contains app source and build configuration only. Approved product and implementation planning is maintained in the Newtype idea workspace at `C:\Users\Kareem\Newtype\04-ideas\habit-tracker-concept`; backend deployment source, local backend tooling, and end-to-end test infrastructure are maintained separately.
 
 ## Current Scope
+
+The September visual rebuild refreshes authentication, habit cards, create/detail screens, and confirmation sheets while preserving personal-only V1. See [redesign notes and verification limits](docs/rally-redesign.md). Run `npx playwright test e2e/redesign.spec.ts` for isolated UI regressions; this is separate from live-backend verification.
 
 Rally does not currently include shared habits, invites, nudges, rankings, social activity, reminder notifications, avatar uploads, analytics, or app-store deployment configuration.

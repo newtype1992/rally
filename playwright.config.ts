@@ -18,7 +18,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run web -- --port 8082 --clear',
+    command: 'node node_modules/expo/bin/cli start --web --port 8082 --clear',
     url: baseURL,
     env: {
       ...process.env,

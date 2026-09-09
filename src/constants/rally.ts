@@ -1,17 +1,18 @@
 export const rallyColors = {
-  bgApp: '#0D0F12',
-  bgSurface: '#171A1F',
-  bgElevated: '#20242B',
-  bgInput: '#20242B',
-  borderDefault: '#343A44',
-  textPrimary: '#F8FAFC',
-  textSecondary: '#A7B0BE',
-  textMuted: '#6B7280',
-  actionPrimary: '#F59E0B',
+  bgApp: '#101210',
+  bgSurface: '#1B1E1A',
+  bgElevated: '#252922',
+  bgInput: '#20241F',
+  borderDefault: '#3E453B',
+  borderInput: '#788171',
+  textPrimary: '#F6F3EA',
+  textSecondary: '#B9BEB1',
+  textMuted: '#A0A895',
+  actionPrimary: '#F5BC63',
   actionPressed: '#D97706',
   actionSoft: '#FCD34D',
-  statusSuccess: '#22C55E',
-  statusDanger: '#EF4444',
+  statusSuccess: '#A5D6A0',
+  statusDanger: '#FF9F97',
   scrim: 'rgba(13, 15, 18, 0.72)',
 } as const;
 
@@ -34,9 +35,9 @@ export const rallySpacing = {
 } as const;
 
 export const rallyRadius = {
-  card: 8,
-  control: 8,
-  sheet: 12,
+  card: 20,
+  control: 14,
+  sheet: 28,
 } as const;
 
 export const rallyLayout = {

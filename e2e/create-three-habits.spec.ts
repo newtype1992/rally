@@ -12,7 +12,7 @@ test('runs the personal V1 habit flow', async ({ page }, testInfo) => {
 
   await logIn(page);
   await expect(page).toHaveURL(/\/habits$/);
-  await expect(page.getByText('Habits', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Your habits.', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Loading habits...', { exact: true })).toBeHidden();
 
   await page.getByLabel('Add habit').click();
@@ -51,7 +51,7 @@ test('runs the personal V1 habit flow', async ({ page }, testInfo) => {
   await expect(page).toHaveURL(/\/habits$/);
 
   await page.goto(detailUrl);
-  await expect(page.getByText('This week', { exact: true }).last()).toBeVisible();
+  await expect(page.getByText('THIS WEEK', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('All-time progress', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('Last 12 weeks', { exact: true }).last()).toBeVisible();
 
@@ -63,22 +63,22 @@ test('runs the personal V1 habit flow', async ({ page }, testInfo) => {
   await expect(page.getByRole('button', { name: 'Mark done' })).toBeVisible();
 
   await page.getByText('Archive habit', { exact: true }).click();
-  await expect(page.getByText('Archive this habit?', { exact: true }).last()).toBeVisible();
+  await expect(page.getByText('A little room to reset.', { exact: true }).last()).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(page).toHaveURL(/\/habits\//);
 
   await page.getByText('Archive habit', { exact: true }).click();
-  await expect(page.getByText('Archive this habit?', { exact: true }).last()).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByText('A little room to reset.', { exact: true }).last()).toBeVisible();
+  await page.getByRole('button', { name: 'Keep this habit' }).click();
 
   await page.getByText('Delete habit', { exact: true }).click();
-  await expect(page.getByText('Delete this habit?', { exact: true }).last()).toBeVisible();
+  await expect(page.getByText('Let this habit go?', { exact: true }).last()).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(page).toHaveURL(/\/habits\//);
 
   await page.getByText('Delete habit', { exact: true }).click();
-  await expect(page.getByText('Delete this habit?', { exact: true }).last()).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByText('Let this habit go?', { exact: true }).last()).toBeVisible();
+  await page.getByRole('button', { name: 'Keep this habit' }).click();
 
   await page.getByLabel('Back').click();
   await page.getByLabel('Add habit').click();
@@ -89,10 +89,10 @@ test('runs the personal V1 habit flow', async ({ page }, testInfo) => {
 
 async function logIn(page: Page) {
   await page.goto('/log-in');
-  await expect(page.getByText('Track your weekly habits privately.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Small steps.', { exact: true })).toBeVisible();
 
-  await replaceText(page.getByPlaceholder(seededUser.email), seededUser.email);
-  await replaceText(page.getByPlaceholder(seededUser.password), seededUser.password);
+  await replaceText(page.getByLabel('Email', { exact: true }), seededUser.email);
+  await replaceText(page.getByLabel('Password', { exact: true }), seededUser.password);
   await page.getByRole('button', { name: 'Log in' }).click();
 }
 

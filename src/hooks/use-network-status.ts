@@ -1,14 +1,11 @@
-import NetInfo from '@react-native-community/netinfo';
-import { useEffect, useState } from 'react';
+import { onlineManager } from '@tanstack/react-query';
+import { useSyncExternalStore } from 'react';
+
+const subscribe = (onChange: () => void) => onlineManager.subscribe(onChange);
+const getSnapshot = () => onlineManager.isOnline();
+const getServerSnapshot = () => true;
 
 export function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(true);
-
-  useEffect(() => {
-    return NetInfo.addEventListener((state) => {
-      setIsOnline(Boolean(state.isConnected && state.isInternetReachable !== false));
-    });
-  }, []);
-
-  return isOnline;
+  // Share the query layer's single native/browser network subscription.
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

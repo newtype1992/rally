@@ -1,4 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
+import { useAppStore } from '@/store/use-app-store';
 
 import {
   archiveHabit,
@@ -34,6 +37,12 @@ export const queryKeys = {
 };
 
 export function useTodayContext() {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => tick((n) => n + 1), 60000);
+    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') tick((n) => n + 1); });
+    return () => { clearInterval(timer); sub.remove(); };
+  }, []);
   const timezone = getDeviceTimeZone();
   const today = isoDateInTimeZone(new Date(), timezone);
   const weekStart = sundayWeekStart(today);
@@ -41,27 +50,30 @@ export function useTodayContext() {
 }
 
 export function useActiveHabits(enabled = true) {
+  const userId = useAppStore((state) => state.session?.user.id);
   const context = useTodayContext();
   return useQuery({
-    queryKey: queryKeys.habits(context.today, context.weekStart),
+    queryKey: [...queryKeys.habits(context.today, context.weekStart), userId],
     queryFn: () => listActiveHabits({ today: context.today, week_start: context.weekStart }),
-    enabled,
+    enabled: enabled && Boolean(userId),
   });
 }
 
 export function useWeeklyProgress(enabled = true) {
+  const userId = useAppStore((state) => state.session?.user.id);
   const context = useTodayContext();
   return useQuery({
-    queryKey: queryKeys.weeklyProgress(context.today, context.weekStart),
+    queryKey: [...queryKeys.weeklyProgress(context.today, context.weekStart), userId],
     queryFn: () => getWeeklyProgress({ today: context.today, week_start: context.weekStart }),
-    enabled,
+    enabled: enabled && Boolean(userId),
   });
 }
 
 export function useHabitDetail(habitId: string | null, enabled = true) {
+  const userId = useAppStore((state) => state.session?.user.id);
   const context = useTodayContext();
   return useQuery({
-    queryKey: queryKeys.habitDetail(habitId ?? '', context.today, context.weekStart),
+    queryKey: [...queryKeys.habitDetail(habitId ?? '', context.today, context.weekStart), userId],
     queryFn: () =>
       getHabitDetail({
         habit_id: habitId ?? '',
@@ -69,57 +81,52 @@ export function useHabitDetail(habitId: string | null, enabled = true) {
         week_start: context.weekStart,
         recent_limit: 84,
       }),
-    enabled: enabled && Boolean(habitId),
+    enabled: enabled && Boolean(habitId) && Boolean(userId),
   });
 }
 
 export function useCreateHabitMutation() {
   const queryClient = useQueryClient();
-  const context = useTodayContext();
   return useMutation({
     mutationFn: (input: { name: string; weeklyTarget: number }) =>
-      unwrapAction(createHabitCommand(input, actionContext(context), commandTransport)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['habits'] });
-      queryClient.invalidateQueries({ queryKey: ['weekly-progress'] });
-    },
+      unwrapAction(createHabitCommand(input, actionContext(), commandTransport)),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['habits'] }),
+      queryClient.invalidateQueries({ queryKey: ['weekly-progress'] }),
+    ]),
   });
 }
 
 export function useMarkHabitDoneMutation() {
   const queryClient = useQueryClient();
-  const context = useTodayContext();
   return useMutation({
-    mutationFn: (input: { habitId: string }) => unwrapAction(markHabitDoneCommand(input, actionContext(context), commandTransport)),
+    mutationFn: (input: { habitId: string }) => unwrapAction(markHabitDoneCommand(input, actionContext(), commandTransport)),
     onSuccess: (_data, variables) => invalidateHabitQueries(queryClient, variables.habitId),
   });
 }
 
 export function useUndoTodayCompletionMutation() {
   const queryClient = useQueryClient();
-  const context = useTodayContext();
   return useMutation({
-    mutationFn: (input: { habitId: string }) => unwrapAction(undoHabitCompletionCommand(input, actionContext(context), commandTransport)),
+    mutationFn: (input: { habitId: string }) => unwrapAction(undoHabitCompletionCommand(input, actionContext(), commandTransport)),
     onSuccess: (_data, variables) => invalidateHabitQueries(queryClient, variables.habitId),
   });
 }
 
 export function useArchiveHabitMutation() {
   const queryClient = useQueryClient();
-  const context = useTodayContext();
   return useMutation({
     mutationFn: (input: { habitId: string; confirmation: 'explicit' }) =>
-      unwrapAction(archiveHabitCommand(input, actionContext(context, input.confirmation), commandTransport)),
+      unwrapAction(archiveHabitCommand(input, actionContext(input.confirmation), commandTransport)),
     onSuccess: (_data, variables) => invalidateHabitQueries(queryClient, variables.habitId),
   });
 }
 
 export function useDeleteHabitMutation() {
   const queryClient = useQueryClient();
-  const context = useTodayContext();
   return useMutation({
     mutationFn: (input: { habitId: string; confirmation: 'explicit' }) =>
-      unwrapAction(deleteHabitCommand(input, actionContext(context, input.confirmation), commandTransport)),
+      unwrapAction(deleteHabitCommand(input, actionContext(input.confirmation), commandTransport)),
     onSuccess: (_data, variables) => invalidateHabitQueries(queryClient, variables.habitId),
   });
 }
@@ -136,10 +143,10 @@ export function habitDetailInput(habitId: string): GetHabitDetailRequest {
 }
 
 function actionContext(
-  context: ReturnType<typeof useTodayContext>,
   confirmation?: 'explicit',
 ): ActionContext {
-  return { source: 'ui', localDate: context.today, timeZone: context.timezone, confirmation };
+  const timeZone = getDeviceTimeZone();
+  return { source: 'ui', localDate: isoDateInTimeZone(new Date(), timeZone), timeZone, confirmation };
 }
 
 async function unwrapAction<T>(resultPromise: Promise<ActionResult<T>>) {
