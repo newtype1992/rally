@@ -2,6 +2,8 @@
 
 Rally is a personal habit tracker built with Expo and React Native. Signed-in users can create habits, record or undo today's completion, review weekly progress and completion history, and archive or delete habits.
 
+Onboarding and social authentication setup: [implementation and provider checklist](docs/onboarding-social-auth.md). Email remains available; Google/Apple require Supabase provider activation, redirect allowlists and public availability flags. Native Google OAuth testing requires a development build rather than Expo Go.
+
 ## Stack
 
 - Expo, React Native, and Expo Router
@@ -66,6 +68,7 @@ The running Codex-created preview uses the bundled Node 24 runtime, without chan
 ## App Capabilities
 
 - Email/password sign-up, sign-in, persisted sessions, and sign-out
+- Skippable two-step onboarding with account-level completion tracking
 - Auth-gated personal habit dashboard
 - Habit creation with validated input
 - Today's completion and undo actions
@@ -74,7 +77,7 @@ The running Codex-created preview uses the bundled Node 24 runtime, without chan
 - Habit archive and permanent deletion flows
 - Network-aware query behavior
 
-The repository contains app source and build configuration only. Approved product and implementation planning is maintained in the Newtype idea workspace at `C:\Users\Kareem\Newtype\04-ideas\habit-tracker-concept`; backend deployment source, local backend tooling, and end-to-end test infrastructure are maintained separately.
+The repository contains app source, build configuration, local Supabase migrations/tests, and end-to-end test infrastructure. Approved product and implementation planning is maintained in the Newtype idea workspace at `C:\Users\Kareem\Newtype\04-ideas\habit-tracker-concept`.
 
 ## Current Scope
 

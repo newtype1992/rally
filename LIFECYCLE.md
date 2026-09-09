@@ -2,6 +2,10 @@
 
 ## Current Phase
 
+Current handoff: personal V1 is implemented and in development validation, not release-ready. The user has deferred Google/Apple provider activation and signed iOS build setup; retain their code with availability flags disabled. Continue testing email authentication, onboarding and the core habit loop. Latest frontend verification passed 13 unit tests, 10 mocked browser regressions, TypeScript, ESLint, all 21 Expo Doctor checks and an iOS JavaScript export; physical-device and live-provider verification remain outstanding.
+
+September 9, 2026: the user requested onboarding plus Google/Apple sign-in. This adds a skippable authenticated introduction and an auth-only callback route to personal V1. Supabase still owns identity and private-habit authorization. Provider credentials, final application identifiers and real-provider/device verification remain external setup requirements; see `docs/onboarding-social-auth.md`. This supersedes the old exclusion of onboarding for this bounded flow, not a bottom-tab or social-product expansion.
+
 Rally has moved from Newtype planning into implementation. This repo is now the app repository for code, dependencies, Supabase migrations, tests, and runtime setup.
 
 The current implementation target is personal-only V1: one signed-in user manages their own habits, completes today's habits, reviews weekly progress, and archives or deletes habits.
@@ -28,7 +32,7 @@ Before implementation changes, pull the needed planning artifacts from the Newty
 
 ## Current Backend Checkpoint
 
-The backend foundation contains one migration, one seed file, and one pgTAP RLS test suite. Local backend coverage includes profiles, personal habits, habit completions, active habit summaries, habit detail/history, weekly progress, archive/delete mutations, RLS policies, grants, seed data, and access-control regression tests.
+The backend contains two migrations, one seed file, and one pgTAP RLS test suite. Local backend coverage includes profiles, personal habits, habit completions, active habit summaries, habit detail/history, weekly progress, archive/delete mutations, RLS policies, grants, seed data, and access-control regression tests.
 
 Verification commands should be run from this repo root:
 
@@ -71,7 +75,7 @@ npm run test:e2e:habits
 
 ## Apple Platform Architecture Readiness
 
-Rally is at Stage 1 — Architecture Readiness. Meaningful writes run through typed application commands shared by UI callers and any future adapter. Authentication, authorization, ownership, validation, idempotency, and destructive-action confirmation remain below presentation code. Expo/React Native stays the default; no native Apple implementation is approved.
+Rally is at Stage 1 — Architecture Readiness for Apple system integrations. Meaningful writes run through typed application commands shared by UI callers and any future adapter. Authentication, authorization, ownership, validation, idempotency, and destructive-action confirmation remain below presentation code. Expo/React Native stays the default. The approved native Apple sign-in integration is an auth-only exception; provider activation is deferred.
 
 Stage 2 is deferred until evidence shows that a system action improves repeat completion, retention, task completion, or interaction count. The likely first bounded experiment is authenticated, idempotent `markHabitDone` execution plus an open-app habit-progress action. App Intents, App Shortcuts, Spotlight, widgets, native modules, and Foundation Models are not part of the current implementation.
 

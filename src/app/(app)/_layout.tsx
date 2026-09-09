@@ -1,12 +1,14 @@
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, usePathname } from 'expo-router';
 
 import { LoadingState, RallyScreen } from '@/components/rally/ui';
 import { rallyColors } from '@/constants/rally';
 import { useAppStore } from '@/store/use-app-store';
+import { hasCompletedOnboarding } from '@/lib/onboarding';
 
 export default function AppLayout() {
   const session = useAppStore((state) => state.session);
   const sessionInitialized = useAppStore((state) => state.sessionInitialized);
+  const pathname = usePathname();
 
   if (!sessionInitialized) {
     return (
@@ -20,6 +22,10 @@ export default function AppLayout() {
     return <Redirect href="/log-in" />;
   }
 
+  if (!hasCompletedOnboarding(session.user.user_metadata) && pathname !== '/onboarding') {
+    return <Redirect href="/onboarding" />;
+  }
+
   return (
     <Stack
       screenOptions={{
@@ -30,6 +36,7 @@ export default function AppLayout() {
         headerTitleStyle: { color: rallyColors.textPrimary },
       }}>
       <Stack.Screen name="habits/index" options={{ title: 'Habits', headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
       <Stack.Screen
         name="habits/new"
         options={{

@@ -94,6 +94,10 @@ async function logIn(page: Page) {
   await replaceText(page.getByLabel('Email', { exact: true }), seededUser.email);
   await replaceText(page.getByLabel('Password', { exact: true }), seededUser.password);
   await page.getByRole('button', { name: 'Log in' }).click();
+  await page.waitForURL(/\/(habits|onboarding)$/);
+  if (page.url().endsWith('/onboarding')) {
+    await page.getByRole('button', { name: 'Skip for now' }).click();
+  }
 }
 
 async function replaceText(locator: Locator, value: string) {

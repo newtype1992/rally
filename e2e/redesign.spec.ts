@@ -3,8 +3,8 @@ import type { HabitDetail } from '../src/types/rally';
 
 test.use({ viewport: { width: 393, height: 852 }, actionTimeout: 15_000 });
 
-async function fixture(page: Page, count = 3) {
-  const user = { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated', email: 'redesign@example.test', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() };
+async function fixture(page: Page, count = 3, onboarded = true) {
+  const user = { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated', email: 'redesign@example.test', app_metadata: {}, user_metadata: onboarded ? { rally_onboarding_version: 1 } : {}, created_at: new Date().toISOString() };
   const jwt = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
   const token = jwt({ alg: 'HS256', typ: 'JWT' }) + '.' + jwt({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600, role: 'authenticated' }) + '.test';
   const names = ['Read a few pages', 'Move your body', 'Make time to unwind'];
@@ -17,8 +17,22 @@ async function fixture(page: Page, count = 3) {
     created_at: '2026-08-01T00:00:00Z', updated_at: '2026-09-08T00:00:00Z',
   }));
   let failWrite = false;
+  let failSetup = false;
+  const oauthRequests: URL[] = [];
   await page.route('**/auth/v1/**', async (route) => {
     if (route.request().url().includes('logout')) return route.fulfill({ status: 204 });
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/authorize')) {
+      oauthRequests.push(url);
+      return route.fulfill({ status: 302, headers: { location: `${url.searchParams.get('redirect_to')}?code=test-verified-code` } });
+    }
+    if (url.pathname.endsWith('/user')) {
+      if (route.request().method() === 'PUT') {
+        if (failSetup) return route.fulfill({ status: 500, json: { message: 'Test setup failure' } });
+        user.user_metadata = { ...user.user_metadata, ...route.request().postDataJSON().data };
+      }
+      return route.fulfill({ json: user });
+    }
     return route.fulfill({ json: { access_token: token, token_type: 'bearer', expires_in: 3600, refresh_token: 'test-refresh', user } });
   });
   await page.route('**/rest/v1/rpc/**', async (route) => {
@@ -50,7 +64,7 @@ async function fixture(page: Page, count = 3) {
     }
     await route.fulfill({ json: { ok: true, data, request_id: 'test', server_time: new Date().toISOString() } });
   });
-  return { failWrites: (fail: boolean) => { failWrite = fail; } };
+  return { failWrites: (fail: boolean) => { failWrite = fail; }, failSetup: (fail: boolean) => { failSetup = fail; }, user, oauthRequests };
 }
 async function login(page: Page) {
   await page.goto('/log-in');
@@ -158,6 +172,76 @@ test('50 habits use a bounded initial render and offline actions are explained',
   await expect(page.getByRole('button', { name: 'Mark done', exact: true }).first()).toBeDisabled();
   await context.setOffline(false);
   await expect(page.getByRole('button', { name: 'Mark done', exact: true }).first()).toBeEnabled();
+});
+
+test('new account onboarding persists, creates a habit, and does not repeat after login', async ({ page }, info) => {
+  const api = await fixture(page, 0, false);
+  await page.goto('/log-in');
+  await page.getByRole('tab', { name: 'Sign up', exact: true }).click();
+  await page.getByLabel('Email', { exact: true }).fill('new@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('password123');
+  await page.getByRole('button', { name: 'Sign up', exact: true }).click();
+  await expect(page).toHaveURL(/onboarding$/);
+  await page.screenshot({ path: info.outputPath('onboarding-welcome.png') });
+  await page.getByRole('button', { name: 'Let’s begin' }).click();
+  await page.screenshot({ path: info.outputPath('onboarding-first-habit.png') });
+  api.failSetup(true);
+  await page.getByRole('button', { name: 'Create my first habit' }).click();
+  await expect(page.getByText('We couldn’t save your setup.', { exact: true })).toBeVisible();
+  api.failSetup(false);
+  await page.getByRole('button', { name: 'Create my first habit' }).click();
+  await expect(page).toHaveURL(/habits\/new$/);
+  expect(api.user.user_metadata.rally_onboarding_version).toBe(1);
+  await page.getByLabel('Habit name', { exact: true }).fill('My first small step');
+  await page.getByRole('button', { name: 'Create habit', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open My first small step', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Log out', exact: true }).click();
+  await login(page);
+  await expect(page).toHaveURL(/habits$/);
+});
+
+test('onboarding can be skipped on a narrow screen', async ({ page }) => {
+  const api = await fixture(page, 0, false);
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto('/log-in');
+  await page.getByLabel('Email', { exact: true }).fill('new@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('password123');
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
+  await expect(page).toHaveURL(/onboarding$/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Skip for now' }).click();
+  await expect(page.getByRole('link', { name: 'Create your first habit' })).toBeVisible();
+  expect(api.user.user_metadata.rally_onboarding_version).toBe(1);
+});
+
+for (const provider of ['Google', 'Apple']) {
+  test(`${provider} OAuth sends S256 and completes the callback into onboarding`, async ({ page }) => {
+    const api = await fixture(page, 0, false);
+    const exchanges: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/token?grant_type=pkce')) exchanges.push(request.postData() ?? '');
+    });
+    await page.goto('/log-in');
+    await page.getByRole('button', { name: `Continue with ${provider}`, exact: true }).click();
+    await expect(page).toHaveURL(/onboarding$/);
+    expect(api.oauthRequests).toHaveLength(1);
+    expect(api.oauthRequests[0].searchParams.get('provider')).toBe(provider.toLowerCase());
+    expect(api.oauthRequests[0].searchParams.get('code_challenge_method')).toBe('s256');
+    expect(api.oauthRequests[0].searchParams.get('code_challenge')).toBeTruthy();
+    expect(exchanges).toHaveLength(1);
+    expect(JSON.parse(exchanges[0]).auth_code).toBe('test-verified-code');
+    expect(JSON.parse(exchanges[0]).code_verifier).toBeTruthy();
+  });
+}
+
+test('OAuth cancellation callback recovers to email login without accepting a session', async ({ page }) => {
+  await fixture(page);
+  await page.goto('/auth/callback?error=access_denied');
+  await expect(page.getByText('We couldn’t finish sign-in.', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/auth\/error$/);
+  await page.getByRole('button', { name: 'Back to log in' }).click();
+  await expect(page).toHaveURL(/log-in$/);
+  await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
 });
 
 test('Midnight layout keeps long names and form actions reachable across mobile widths', async ({ page }, info) => {

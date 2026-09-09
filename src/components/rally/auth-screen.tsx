@@ -1,6 +1,6 @@
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
@@ -9,6 +9,8 @@ import { rallyColors as c } from '@/constants/rally';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { signInWithEmail, signUpWithEmail } from '@/lib/rally-api';
 import { useAppStore } from '@/store/use-app-store';
+import { SocialSignIn } from '@/components/rally/social-sign-in';
+import { signInWithSocialProvider, type SocialProvider } from '@/lib/social-auth';
 
 type AuthForm = { email: string; password: string };
 const schema = z.object({
@@ -23,29 +25,50 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
   const signup = mode === 'signup';
   const [apiError, setApiError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState(false);
+  const [socialPending, setSocialPending] = useState<SocialProvider | null>(null);
+  const socialLock = useRef(false);
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<AuthForm>({
     defaultValues: { email: '', password: '' },
     mode: 'onBlur',
   });
   const values = useWatch({ control });
   const valid = schema.safeParse(values).success;
-  const onSubmit = handleSubmit(async (values) => {
-    const result = schema.safeParse(values);
-    if (!result.success || !online) return;
-    setApiError(null);
+  const busy = isSubmitting || socialPending !== null;
+  const socialSignIn = async (provider: SocialProvider) => {
+    if (socialLock.current || isSubmitting || !online || !ready) return;
+    socialLock.current = true; setSocialPending(provider); setApiError(null);
     try {
-      const session = signup
-        ? await signUpWithEmail(result.data.email, result.data.password)
-        : await signInWithEmail(result.data.email, result.data.password);
+      const session = await signInWithSocialProvider(provider);
       if (session) router.replace('/habits');
-      else setConfirmation(true);
-    } catch {
-      setApiError(signup
-        ? 'We couldn’t create your account. Check your connection and try again.'
-        : 'We couldn’t log you in. Check your email and password, then try again.');
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Sign-in didn’t finish. Please try again.');
+    } finally { socialLock.current = false; setSocialPending(null); }
+  };
+  const onSubmit = async () => {
+    if (socialLock.current || !ready || !online || confirmation) return;
+    socialLock.current = true;
+    try {
+      await handleSubmit(async (values) => {
+        const result = schema.safeParse(values);
+        if (!result.success || !online) return;
+        setApiError(null);
+        try {
+          const session = signup
+            ? await signUpWithEmail(result.data.email, result.data.password)
+            : await signInWithEmail(result.data.email, result.data.password);
+          if (session) router.replace('/habits');
+          else setConfirmation(true);
+        } catch {
+          setApiError(signup
+            ? 'We couldn’t create your account. Check your connection and try again.'
+            : 'We couldn’t log you in. Check your email and password, then try again.');
+        }
+      })();
+    } finally {
+      socialLock.current = false;
     }
-  });
-  return <RallyScreen contentStyle={{ gap: 27, paddingTop: 12 }}>
+  };
+  return <RallyScreen contentStyle={{ gap: 22, paddingTop: 12 }}>
     <Brand />
     <View style={s.hero}>
       <RallyText variant="title" style={s.heroText}>Make room{"\n"}for progress.</RallyText>
@@ -53,26 +76,27 @@ export function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
         Track your weekly habits privately.{"\n"}One small commitment at a time.
       </RallyText>
     </View>
+    <SocialSignIn disabled={!ready || !online || busy} pending={socialPending} onSignIn={(provider) => void socialSignIn(provider)} />
+    {apiError ? <ErrorState title="Let’s try that again." message={apiError} /> : null}
     <View style={s.form}>
       <View style={s.tabs} accessibilityRole="tablist">
         {(['login', 'signup'] as const).map((tab) => <Pressable key={tab} accessibilityRole="tab"
-          accessibilityLabel={tab === 'login' ? 'Log in' : 'Sign up'} accessibilityState={{ selected: mode === tab, disabled: isSubmitting }}
-          disabled={isSubmitting} onPress={() => { if (mode !== tab) router.replace(tab === 'login' ? '/log-in' : '/sign-up'); }}
+          accessibilityLabel={tab === 'login' ? 'Log in' : 'Sign up'} accessibilityState={{ selected: mode === tab, disabled: busy }}
+          disabled={busy} onPress={() => { if (mode !== tab) router.replace(tab === 'login' ? '/log-in' : '/sign-up'); }}
           style={[s.tab, mode === tab && s.activeTab]}>
           <RallyText color={mode === tab ? c.actionPrimary : c.textSecondary} style={{ fontSize: 14, fontWeight: '600' }}>{tab === 'login' ? 'Log in' : 'Sign up'}</RallyText>
         </Pressable>)}
       </View>
       <Controller control={control} name="email" rules={{ validate: (v) => z.string().trim().email().safeParse(v).success || 'Enter a valid email.' }}
         render={({ field }) => <TextField label="Email" value={field.value} onChangeText={field.onChange} onBlur={field.onBlur}
-          editable={ready && !isSubmitting} keyboardType="email-address" autoComplete="email" textContentType="emailAddress" autoCorrect={false} placeholder="you@example.com" error={errors.email?.message} />} />
+          editable={ready && !busy} keyboardType="email-address" autoComplete="email" textContentType="emailAddress" autoCorrect={false} placeholder="you@example.com" error={errors.email?.message} />} />
       <Controller control={control} name="password" rules={{ required: 'Enter your password.', minLength: { value: 6, message: 'Use at least 6 characters.' } }}
         render={({ field }) => <TextField label="Password" value={field.value} onChangeText={field.onChange} onBlur={field.onBlur}
-          editable={ready && !isSubmitting} secureTextEntry autoComplete={signup ? 'new-password' : 'current-password'} textContentType={signup ? 'newPassword' : 'password'}
+          editable={ready && !busy} secureTextEntry autoComplete={signup ? 'new-password' : 'current-password'} textContentType={signup ? 'newPassword' : 'password'}
           placeholder={signup ? 'At least 6 characters' : 'Your password'} returnKeyType="go" onSubmitEditing={() => { if (valid) void onSubmit(); }}
           error={errors.password?.message} />} />
-      {apiError ? <ErrorState title="Let’s try that again." message={apiError} /> : null}
       {confirmation ? <View accessibilityRole="alert"><RallyText>Check your email to confirm your account, then return to Log in.</RallyText></View> : null}
-      <RallyButton disabled={!ready || !valid || !online || confirmation} loading={isSubmitting} onPress={onSubmit}>{isSubmitting ? signup ? 'Creating account…' : 'Signing in…' : signup ? 'Sign up' : 'Log in'}</RallyButton>
+      <RallyButton disabled={!ready || !valid || !online || confirmation || socialPending !== null} loading={isSubmitting} onPress={onSubmit}>{isSubmitting ? signup ? 'Creating account…' : 'Signing in…' : signup ? 'Sign up' : 'Log in'}</RallyButton>
     </View>
     <StudioSignature />
   </RallyScreen>;

@@ -1,6 +1,8 @@
 import type { AuthError, Session } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
+import { ONBOARDING_VERSION } from '@/lib/onboarding';
+import { getAuthRedirectUrl } from '@/lib/auth-redirect';
 import type {
   ApiError,
   ApiResult,
@@ -82,6 +84,7 @@ export async function signUpWithEmail(email: string, password: string, displayNa
     email,
     password,
     options: {
+      emailRedirectTo: getAuthRedirectUrl(),
       data: displayName ? { display_name: displayName } : undefined,
     },
   });
@@ -96,6 +99,12 @@ export async function signOut() {
   if (error) {
     throwAuthError(error);
   }
+}
+
+export async function completeOnboarding() {
+  const { data, error } = await supabase.auth.updateUser({ data: { rally_onboarding_version: ONBOARDING_VERSION } });
+  if (error) throwAuthError(error);
+  return data.user;
 }
 
 export async function getCurrentSession(): Promise<Session | null> {

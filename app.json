@@ -8,6 +8,7 @@
     "scheme": "rally",
     "userInterfaceStyle": "dark",
     "ios": {
+      "usesAppleSignIn": true,
       "icon": "./assets/expo.icon"
     },
     "android": {
@@ -25,6 +26,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {

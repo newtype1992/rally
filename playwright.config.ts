@@ -24,6 +24,8 @@ export default defineConfig({
       ...process.env,
       EXPO_PUBLIC_SUPABASE_URL: localSupabaseUrl,
       EXPO_PUBLIC_SUPABASE_ANON_KEY: localSupabaseAnonKey,
+      EXPO_PUBLIC_GOOGLE_AUTH_ENABLED: 'true',
+      EXPO_PUBLIC_APPLE_AUTH_ENABLED: 'true',
     },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
