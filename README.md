@@ -8,6 +8,16 @@ Rally is a personal habit tracker built with Expo and React Native. Signed-in us
 
 Onboarding and social authentication setup: [implementation and provider checklist](docs/onboarding-social-auth.md). Email remains available; Google/Apple require Supabase provider activation, redirect allowlists and public availability flags. Native Google OAuth testing requires a development build rather than Expo Go.
 
+## Screenshots
+
+Your habits, habit creation, and individual progress. Captured from Rally's web preview at a mobile viewport using synthetic demo habits.
+
+<p>
+  <img src="./docs/images/habits-dashboard.png" width="240" alt="Rally dashboard showing three demo habits and weekly completion progress." />
+  <img src="./docs/images/create-habit.png" width="240" alt="Rally habit creation with a name and weekly target." />
+  <img src="./docs/images/habit-progress.png" width="240" alt="Rally habit detail showing weekly progress and completion statistics." />
+</p>
+
 ## Stack
 
 - Expo, React Native, and Expo Router
