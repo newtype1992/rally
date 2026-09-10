@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./docs/images/newtype-readme-header.svg" width="1200" alt="Rally — animated pixel habit calendar with weekly check-ins." />
+</p>
+
 # Rally
 
 Rally is a personal habit tracker built with Expo and React Native. Signed-in users can create habits, record or undo today's completion, review weekly progress and completion history, and archive or delete habits.
